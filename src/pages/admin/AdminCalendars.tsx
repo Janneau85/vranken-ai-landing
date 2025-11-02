@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -21,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast as sonnerToast } from "sonner";
 
 type CalendarAssignment = {
   id: string;
@@ -38,13 +38,22 @@ type UserProfile = {
   email?: string;
 };
 
+type GoogleCalendar = {
+  id: string;
+  summary: string;
+  description?: string;
+  backgroundColor?: string;
+  primary?: boolean;
+};
+
 export default function AdminCalendars() {
   const [assignments, setAssignments] = useState<CalendarAssignment[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
-  const [calendarId, setCalendarId] = useState("");
-  const [calendarName, setCalendarName] = useState("");
+  const [userCalendars, setUserCalendars] = useState<GoogleCalendar[]>([]);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
+  const [selectedCalendarId, setSelectedCalendarId] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,43 +110,76 @@ export default function AdminCalendars() {
     }
   };
 
-  const handleAddAssignment = async () => {
-    if (!userId.trim() || !calendarId.trim()) {
-      toast({
-        title: "Fout",
-        description: "Vul zowel Gebruikers ID als Kalender ID in",
-        variant: "destructive",
-      });
+  const fetchUserCalendars = async (selectedUserId: string) => {
+    if (!selectedUserId) {
+      setUserCalendars([]);
+      setSelectedCalendarId("");
       return;
     }
+
+    setIsLoadingCalendars(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar', {
+        body: { 
+          action: 'list_calendars_for_user',
+          userId: selectedUserId
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.items) {
+        setUserCalendars(data.items);
+      } else {
+        setUserCalendars([]);
+        sonnerToast.error("Gebruiker heeft Google Calendar nog niet gekoppeld");
+      }
+    } catch (error: any) {
+      console.error("Error fetching user calendars:", error);
+      if (error.message?.includes('not connected')) {
+        sonnerToast.error("Deze gebruiker moet eerst Google Calendar koppelen");
+      } else {
+        sonnerToast.error("Fout bij ophalen van kalenders");
+      }
+      setUserCalendars([]);
+    } finally {
+      setIsLoadingCalendars(false);
+    }
+  };
+
+  const handleUserChange = (selectedUserId: string) => {
+    setUserId(selectedUserId);
+    setSelectedCalendarId("");
+    fetchUserCalendars(selectedUserId);
+  };
+
+  const handleAddAssignment = async () => {
+    if (!userId || !selectedCalendarId) {
+      sonnerToast.error("Selecteer een gebruiker en kalender");
+      return;
+    }
+
+    const selectedCalendar = userCalendars.find(c => c.id === selectedCalendarId);
 
     try {
       const { error } = await supabase
         .from("calendar_assignments")
         .insert({
-          user_id: userId.trim(),
-          calendar_id: calendarId.trim(),
-          calendar_name: calendarName.trim() || null,
+          user_id: userId,
+          calendar_id: selectedCalendarId,
+          calendar_name: selectedCalendar?.summary || null,
         });
 
       if (error) throw error;
 
-      toast({
-        title: "Gelukt",
-        description: "Kalender toewijzing succesvol toegevoegd",
-      });
-
+      sonnerToast.success("Kalender toegewezen aan gebruiker");
       setUserId("");
-      setCalendarId("");
-      setCalendarName("");
+      setSelectedCalendarId("");
+      setUserCalendars([]);
       fetchAssignments();
     } catch (error: any) {
       console.error("Error adding calendar assignment:", error);
-      toast({
-        title: "Fout",
-        description: error.message || "Kan kalender toewijzing niet toevoegen",
-        variant: "destructive",
-      });
+      sonnerToast.error(error.message || "Fout bij toewijzen van kalender");
     }
   };
 
@@ -182,8 +224,8 @@ export default function AdminCalendars() {
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Alleen admins kunnen kalenders toewijzen aan gebruikers. Om te weten welke kalender IDs beschikbaar zijn voor een gebruiker, 
-          vraag de gebruiker om in te loggen in hun Google Calendar en de kalender instellingen te bekijken, of gebruik 'primary' voor hun hoofdkalender.
+          <strong>Let op:</strong> Gebruikers moeten eerst hun Google Calendar koppelen voordat je kalenders kunt toewijzen.
+          Na het selecteren van een gebruiker worden hun beschikbare kalenders automatisch opgehaald.
         </AlertDescription>
       </Alert>
 
@@ -196,10 +238,10 @@ export default function AdminCalendars() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div>
-            <Label htmlFor="userId">Selecteer Gebruiker</Label>
-            <Select value={userId} onValueChange={setUserId}>
+            <Label htmlFor="userId">Gebruiker</Label>
+            <Select value={userId} onValueChange={handleUserChange}>
               <SelectTrigger id="userId">
-                <SelectValue placeholder="Kies een gebruiker..." />
+                <SelectValue placeholder="Selecteer gebruiker..." />
               </SelectTrigger>
               <SelectContent>
                 {users.map((user) => (
@@ -210,29 +252,56 @@ export default function AdminCalendars() {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="calendarId">Google Kalender ID</Label>
-            <Input
-              id="calendarId"
-              value={calendarId}
-              onChange={(e) => setCalendarId(e.target.value)}
-              placeholder="bijv. primary of daphnepaes3@gmail.com"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Gebruik 'primary' voor hoofdkalender, of een email adres / kalender ID zoals 'daphnepaes3@gmail.com', 'janneau@gmail.com', etc.
-            </p>
-          </div>
-          <div>
-            <Label htmlFor="calendarName">Kalender Naam (optioneel)</Label>
-            <Input
-              id="calendarName"
-              value={calendarName}
-              onChange={(e) => setCalendarName(e.target.value)}
-              placeholder="bijv. Daphne, Janneau, AI, etc."
-            />
-          </div>
-          <Button onClick={handleAddAssignment} disabled={!userId || !calendarId}>
-            Toewijzing Toevoegen
+
+          {userId && (
+            <div>
+              <Label htmlFor="calendar">Google Kalender</Label>
+              {isLoadingCalendars ? (
+                <div className="flex items-center gap-2 p-3 border rounded-md text-sm text-muted-foreground">
+                  <CalendarIcon className="h-4 w-4 animate-spin" />
+                  Kalenders ophalen...
+                </div>
+              ) : userCalendars.length > 0 ? (
+                <Select value={selectedCalendarId} onValueChange={setSelectedCalendarId}>
+                  <SelectTrigger id="calendar">
+                    <SelectValue placeholder="Selecteer kalender..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {userCalendars.map((calendar) => (
+                      <SelectItem key={calendar.id} value={calendar.id}>
+                        <div className="flex items-center gap-2 py-1">
+                          <div 
+                            className="w-3 h-3 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: calendar.backgroundColor || '#4285f4' }}
+                          />
+                          <span className="font-medium">{calendar.summary}</span>
+                          {calendar.primary && (
+                            <Badge variant="secondary" className="ml-1 text-xs">Primary</Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            {calendar.id.substring(0, 20)}...
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Deze gebruiker heeft nog geen Google Calendar gekoppeld.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          <Button 
+            onClick={handleAddAssignment}
+            disabled={!userId || !selectedCalendarId || isLoadingCalendars}
+          >
+            Toevoegen
           </Button>
         </CardContent>
       </Card>

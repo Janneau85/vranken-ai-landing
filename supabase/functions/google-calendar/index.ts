@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, accessToken, refreshToken, code, redirectUri, calendarId } = body;
+    const { action, accessToken, refreshToken, code, redirectUri, calendarId, userId } = body;
     console.log('Google Calendar function called with action:', action);
 
     const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
@@ -21,6 +22,11 @@ serve(async (req) => {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       throw new Error('Google OAuth credentials not configured');
     }
+
+    // Initialize Supabase client for list_calendars_for_user action
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Handle token exchange
     if (action === 'exchange_code' && code && redirectUri) {
@@ -159,6 +165,129 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ events: eventsData.items || [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle listing calendars for a user (admin only)
+    if (action === 'list_calendars_for_user' && userId) {
+      console.log('Admin listing calendars for user:', userId);
+      
+      // Get the requesting user from the auth header
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+      
+      if (userError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if requester is admin
+      const { data: roleData } = await supabaseClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+
+      if (!roleData) {
+        return new Response(
+          JSON.stringify({ error: 'Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch user's token from database
+      const { data: tokenData, error: tokenError } = await supabaseClient
+        .from('google_tokens')
+        .select('access_token, refresh_token, expires_at')
+        .eq('user_id', userId)
+        .single();
+
+      if (tokenError || !tokenData) {
+        return new Response(
+          JSON.stringify({ error: 'User has not connected Google Calendar yet' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      let userAccessToken = tokenData.access_token;
+
+      // Check if token is expired
+      if (tokenData.expires_at && new Date(tokenData.expires_at) <= new Date()) {
+        if (!tokenData.refresh_token) {
+          return new Response(
+            JSON.stringify({ error: 'Token expired and no refresh token available' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Refresh the token
+        const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: GOOGLE_CLIENT_ID,
+            client_secret: GOOGLE_CLIENT_SECRET,
+            refresh_token: tokenData.refresh_token,
+            grant_type: 'refresh_token',
+          }),
+        });
+
+        if (!refreshResponse.ok) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to refresh token' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const refreshData = await refreshResponse.json();
+        userAccessToken = refreshData.access_token;
+
+        // Update token in database
+        const expiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
+        await supabaseClient
+          .from('google_tokens')
+          .update({
+            access_token: refreshData.access_token,
+            expires_at: expiresAt,
+          })
+          .eq('user_id', userId);
+      }
+
+      // Fetch calendars
+      const calendarResponse = await fetch(
+        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+        {
+          headers: {
+            'Authorization': `Bearer ${userAccessToken}`,
+          },
+        }
+      );
+
+      if (!calendarResponse.ok) {
+        const errorText = await calendarResponse.text();
+        console.error('Calendar API error:', errorText);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch calendars from Google' }),
+          { status: calendarResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const calendarData = await calendarResponse.json();
+      
+      return new Response(
+        JSON.stringify(calendarData),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

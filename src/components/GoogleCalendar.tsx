@@ -66,10 +66,33 @@ const GoogleCalendar = () => {
         throw new Error('Failed to get access token');
       }
 
-      // Store tokens
+      // Store tokens in localStorage
       localStorage.setItem('google_access_token', data.access_token);
       if (data.refresh_token) {
         localStorage.setItem('google_refresh_token', data.refresh_token);
+      }
+
+      // Also store in database for admin access
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && data.refresh_token) {
+        const expiresAt = data.expires_in 
+          ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+          : null;
+
+        const { error: dbError } = await supabase
+          .from('google_tokens')
+          .upsert({
+            user_id: user.id,
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+            expires_at: expiresAt,
+          }, {
+            onConflict: 'user_id'
+          });
+
+        if (dbError) {
+          console.error('Error storing tokens in database:', dbError);
+        }
       }
 
       setIsConnected(true);
