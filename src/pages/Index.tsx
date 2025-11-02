@@ -25,9 +25,12 @@ const Index = () => {
 
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-2xl">
-          <p className="text-xl text-muted-foreground">
-            Welcome to the future of AI
-          </p>
+          <a 
+            href="/auth"
+            className="inline-block px-8 py-3 bg-accent text-accent-foreground hover:bg-accent/80 transition-all rounded-lg font-medium"
+          >
+            Login
+          </a>
         </div>
       </main>
 
