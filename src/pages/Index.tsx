@@ -1,12 +1,30 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import Footer from "@/components/Footer";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="relative flex items-center justify-center py-32 overflow-hidden">
+        <h1 
+          className="text-[12rem] font-bold select-none"
+          style={{
+            color: 'hsl(var(--background))',
+            textShadow: 'var(--emboss-inset)',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Vranken.AI
+        </h1>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center px-4">
+        <div className="text-center max-w-2xl">
+          <p className="text-xl text-muted-foreground">
+            Welcome to the future of AI
+          </p>
+        </div>
+      </main>
+
+      <Footer />
     </div>
   );
 };
