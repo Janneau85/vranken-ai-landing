@@ -11,6 +11,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
+  const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -32,6 +33,17 @@ const Dashboard = () => {
       if (!session) {
         navigate("/auth");
       } else {
+        // Fetch user profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileData?.name) {
+          setUserName(profileData.name);
+        }
+
         // Check if user is admin
         const { data } = await supabase.rpc('has_role', {
           _user_id: session.user.id,
@@ -99,10 +111,10 @@ const Dashboard = () => {
       <main className="flex-1 container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-4xl font-bold mb-4 text-foreground">
-            Welcome to the Family Dashboard
+            Welkom {userName || user?.email}
           </h2>
           <p className="text-muted-foreground mb-8">
-            Logged in as: {user?.email}
+            Je persoonlijke Family Dashboard
           </p>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
