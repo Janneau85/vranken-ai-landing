@@ -11,9 +11,7 @@ const Auth = () => {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -66,47 +64,6 @@ const Auth = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const redirectUrl = `${window.location.origin}/dashboard`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            name: name,
-          }
-        }
-      });
-
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Registratie mislukt",
-          description: error.message,
-        });
-      } else {
-        toast({
-          title: "Account aangemaakt!",
-          description: "Je kunt nu inloggen.",
-        });
-        setIsSignUp(false);
-      }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Fout",
-        description: "Er is een onverwachte fout opgetreden.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -123,26 +80,11 @@ const Auth = () => {
             vranken.AI
           </h1>
           <p className="text-muted-foreground">
-            {isSignUp ? "Maak een account aan" : "Family Dashboard Login"}
+            Family Dashboard Login
           </p>
         </div>
 
-        <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
-          {isSignUp && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Naam</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Je naam"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="bg-card border-border"
-              />
-            </div>
-          )}
-
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -174,22 +116,7 @@ const Auth = () => {
             disabled={loading}
             className="w-full bg-accent hover:bg-accent/80"
           >
-            {loading 
-              ? (isSignUp ? "Account aanmaken..." : "Inloggen...") 
-              : (isSignUp ? "Account aanmaken" : "Inloggen")
-            }
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full"
-          >
-            {isSignUp 
-              ? "Al een account? Log in" 
-              : "Nog geen account? Registreer"
-            }
+            {loading ? "Inloggen..." : "Inloggen"}
           </Button>
         </form>
       </div>
