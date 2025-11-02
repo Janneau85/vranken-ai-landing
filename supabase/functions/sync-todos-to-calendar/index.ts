@@ -87,18 +87,33 @@ serve(async (req) => {
         // Get todo details
         const { data: todo, error: todoError } = await supabase
           .from('todos')
-          .select('*, profiles!todos_assigned_to_fkey(name)')
+          .select('*')
           .eq('id', todoId)
           .single();
 
         if (todoError || !todo) {
+          console.error('Todo fetch error:', todoError);
           throw new Error('Todo not found');
+        }
+
+        // Get assigned user profile
+        let assignedName = 'Niemand';
+        if (todo.assigned_to) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', todo.assigned_to)
+            .single();
+          
+          if (profile) {
+            assignedName = profile.name;
+          }
         }
 
         // Create Google Calendar event
         const event = {
           summary: `📋 ${todo.title}`,
-          description: `${todo.description || ''}\n\nCategorie: ${todo.category || 'Geen'}\nPrioriteit: ${todo.priority}\nToegewezen aan: ${todo.profiles?.name || 'Niemand'}`,
+          description: `${todo.description || ''}\n\nCategorie: ${todo.category || 'Geen'}\nPrioriteit: ${todo.priority}\nToegewezen aan: ${assignedName}`,
           start: {
             dateTime: todo.due_date || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
             timeZone: 'Europe/Amsterdam',
