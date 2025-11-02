@@ -2,3 +2,12 @@ project_id = "ibktwyrsahvlbziodrxw"
 
 [functions.google-calendar]
 verify_jwt = false
+
+[functions.shopping-automation]
+verify_jwt = false
+
+[functions.meal-automation]
+verify_jwt = false
+
+[functions.todo-automation]
+verify_jwt = false

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import GoogleCalendar from "@/components/GoogleCalendar";
+import { ShoppingCart, UtensilsCrossed, CheckSquare } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const Dashboard = () => {
@@ -118,26 +119,35 @@ const Dashboard = () => {
           </p>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-4xl">
-            <div className="p-6 bg-card border border-border rounded-lg">
-              <h3 className="text-xl font-semibold mb-2 text-foreground">Family Updates</h3>
-              <p className="text-muted-foreground">
-                Stay connected with family news and updates.
-              </p>
-            </div>
+            <Link to="/shopping">
+              <div className="p-6 bg-card border border-border rounded-lg hover:border-primary transition-colors cursor-pointer h-full">
+                <ShoppingCart className="w-8 h-8 mb-3 text-primary" />
+                <h3 className="text-xl font-semibold mb-2 text-foreground">Boodschappenlijst</h3>
+                <p className="text-muted-foreground">
+                  Gezamenlijke boodschappenlijst met real-time sync
+                </p>
+              </div>
+            </Link>
 
-            <div className="p-6 bg-card border border-border rounded-lg">
-              <h3 className="text-xl font-semibold mb-2 text-foreground">Photo Gallery</h3>
-              <p className="text-muted-foreground">
-                Share and view family photos and memories.
-              </p>
-            </div>
+            <Link to="/meals">
+              <div className="p-6 bg-card border border-border rounded-lg hover:border-primary transition-colors cursor-pointer h-full">
+                <UtensilsCrossed className="w-8 h-8 mb-3 text-primary" />
+                <h3 className="text-xl font-semibold mb-2 text-foreground">Maaltijdplanner</h3>
+                <p className="text-muted-foreground">
+                  Plan je maaltijden en beheer recepten
+                </p>
+              </div>
+            </Link>
 
-            <div className="p-6 bg-card border border-border rounded-lg">
-              <h3 className="text-xl font-semibold mb-2 text-foreground">Events & Planning</h3>
-              <p className="text-muted-foreground">
-                Bekijk je familie agenda en aankomende events.
-              </p>
-            </div>
+            <Link to="/todos">
+              <div className="p-6 bg-card border border-border rounded-lg hover:border-primary transition-colors cursor-pointer h-full">
+                <CheckSquare className="w-8 h-8 mb-3 text-primary" />
+                <h3 className="text-xl font-semibold mb-2 text-foreground">Todo Lijst</h3>
+                <p className="text-muted-foreground">
+                  Huishoudelijke taken en klusjes
+                </p>
+              </div>
+            </Link>
           </div>
         </div>
 

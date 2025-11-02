@@ -13,6 +13,9 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminCalendars from "./pages/admin/AdminCalendars";
 import AdminData from "./pages/admin/AdminData";
+import ShoppingList from "./pages/ShoppingList";
+import MealPlanner from "./pages/MealPlanner";
+import TodoList from "./pages/TodoList";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +29,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/shopping" element={<ShoppingList />} />
+          <Route path="/meals" element={<MealPlanner />} />
+          <Route path="/todos" element={<TodoList />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
