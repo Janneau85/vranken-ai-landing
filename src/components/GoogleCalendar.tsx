@@ -24,7 +24,10 @@ interface GoogleCalendarProps {
 
 const GOOGLE_CLIENT_ID = "180123280397-91i67vlquc2mm835toa1r4jbuvp7rvc0.apps.googleusercontent.com";
 const REDIRECT_URI = window.location.origin + "/dashboard";
-const SCOPES = "https://www.googleapis.com/auth/calendar.events";
+const SCOPES = [
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.readonly"
+].join(" ");
 
 const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -165,6 +168,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
       `response_type=code&` +
       `scope=${encodeURIComponent(SCOPES)}&` +
       `access_type=offline&` +
+      `include_granted_scopes=true&` +
       `prompt=consent`;
     
     window.location.href = authUrl;
