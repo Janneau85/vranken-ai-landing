@@ -131,6 +131,16 @@ const Dashboard = () => {
                 Share and view family photos and memories.
               </p>
             </div>
+
+            <div 
+              onClick={() => navigate("/my-calendars")}
+              className="p-6 bg-card border border-border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
+            >
+              <h3 className="text-xl font-semibold mb-2 text-foreground">Mijn Kalenders</h3>
+              <p className="text-muted-foreground">
+                Beheer welke Google Calendars je wilt zien.
+              </p>
+            </div>
           </div>
 
           <div className="mt-8">

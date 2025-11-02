@@ -86,6 +86,44 @@ serve(async (req) => {
       );
     }
 
+    // Handle listing calendars
+    if (action === 'list_calendars' && accessToken) {
+      console.log('Fetching calendar list');
+      
+      const calendarListResponse = await fetch(
+        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      if (!calendarListResponse.ok) {
+        const error = await calendarListResponse.text();
+        console.error('Failed to fetch calendar list:', error);
+        throw new Error('Failed to fetch calendar list');
+      }
+
+      const calendarListData = await calendarListResponse.json();
+      const calendars = calendarListData.items?.map((cal: any) => ({
+        id: cal.id,
+        summary: cal.summary,
+        description: cal.description,
+        backgroundColor: cal.backgroundColor,
+        foregroundColor: cal.foregroundColor,
+        primary: cal.primary || false,
+      })) || [];
+      
+      console.log(`Successfully fetched ${calendars.length} calendars`);
+
+      return new Response(
+        JSON.stringify({ calendars }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Handle getting calendar events
     if (action === 'get_events' && accessToken) {
       const targetCalendar = calendarId || 'primary';

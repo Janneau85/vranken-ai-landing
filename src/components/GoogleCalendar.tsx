@@ -13,6 +13,9 @@ interface CalendarEvent {
   description?: string;
   htmlLink?: string;
   location?: string;
+  calendarId?: string;
+  calendarName?: string;
+  backgroundColor?: string;
 }
 
 const GOOGLE_CLIENT_ID = "180123280397-g3ulpf9rv6cetrlrh8veg3pmdkba9u3m.apps.googleusercontent.com";
@@ -110,7 +113,7 @@ const GoogleCalendar = () => {
 
       const { data: assignments, error: assignError } = await supabase
         .from('calendar_assignments')
-        .select('calendar_id')
+        .select('calendar_id, calendar_name')
         .eq('user_id', user.id);
 
       if (assignError) throw assignError;
@@ -119,10 +122,28 @@ const GoogleCalendar = () => {
         setEvents([]);
         toast({
           title: "Geen calendars",
-          description: "Er zijn geen calendars aan jou toegewezen. Neem contact op met een admin.",
+          description: "Er zijn geen calendars aan jou toegewezen. Ga naar 'Mijn Kalenders' om kalenders te selecteren.",
         });
         setLoading(false);
         return;
+      }
+
+      // Fetch list of calendars to get colors
+      const { data: calendarListData } = await supabase.functions.invoke('google-calendar', {
+        body: {
+          action: 'list_calendars',
+          accessToken,
+        },
+      });
+
+      const calendarColors = new Map();
+      if (calendarListData?.calendars) {
+        calendarListData.calendars.forEach((cal: any) => {
+          calendarColors.set(cal.id, {
+            backgroundColor: cal.backgroundColor,
+            summary: cal.summary,
+          });
+        });
       }
 
       // Fetch events for each assigned calendar
@@ -143,7 +164,14 @@ const GoogleCalendar = () => {
         }
         
         if (data?.events) {
-          allEvents.push(...data.events);
+          const calendarInfo = calendarColors.get(assignment.calendar_id);
+          const enrichedEvents = data.events.map((event: CalendarEvent) => ({
+            ...event,
+            calendarId: assignment.calendar_id,
+            calendarName: assignment.calendar_name || calendarInfo?.summary || assignment.calendar_id,
+            backgroundColor: calendarInfo?.backgroundColor,
+          }));
+          allEvents.push(...enrichedEvents);
         }
       }
 
@@ -277,14 +305,31 @@ const GoogleCalendar = () => {
               <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
             ) : (
               <div className="space-y-3">
-                {events.slice(0, 5).map((event) => (
+                {events.slice(0, 10).map((event) => (
                   <div 
                     key={event.id}
-                    className="p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                    className="p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                    style={{
+                      borderLeftWidth: '4px',
+                      borderLeftColor: event.backgroundColor || 'hsl(var(--primary))',
+                    }}
                   >
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold truncate">{event.summary}</h4>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold truncate">{event.summary}</h4>
+                          {event.calendarName && (
+                            <span 
+                              className="text-xs px-2 py-0.5 rounded-full"
+                              style={{
+                                backgroundColor: event.backgroundColor ? `${event.backgroundColor}20` : 'hsl(var(--accent))',
+                                color: event.backgroundColor || 'hsl(var(--foreground))',
+                              }}
+                            >
+                              {event.calendarName}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                           <Clock className="h-3 w-3" />
                           <span>{formatEventDate(event)}</span>
