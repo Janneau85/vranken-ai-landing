@@ -12,7 +12,29 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -33,8 +55,15 @@ serve(async (req) => {
       );
     }
 
-    // Get master account tokens
-    const MASTER_ACCOUNT_ID = 'b64ce1b2-e684-4568-87ac-0e5bc867366d';
+    // Get master account tokens from environment variable
+    const MASTER_ACCOUNT_ID = Deno.env.get('CALENDAR_MASTER_ACCOUNT_ID');
+    if (!MASTER_ACCOUNT_ID) {
+      return new Response(
+        JSON.stringify({ error: 'Calendar master account not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { data: tokenData, error: tokenError } = await supabase
       .from('google_tokens')
       .select('access_token, refresh_token, expires_at')
