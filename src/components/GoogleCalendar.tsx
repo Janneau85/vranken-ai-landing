@@ -22,7 +22,7 @@ interface GoogleCalendarProps {
   isAdmin: boolean;
 }
 
-const GOOGLE_CLIENT_ID = "180123280397-g3ulpf9rv6cetrlrh8veg3pmdkba9u3m.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "180123280397-91i67vlquc2mm835toa1r4jbuvp7rvc0.apps.googleusercontent.com";
 const REDIRECT_URI = window.location.origin + "/dashboard";
 const SCOPES = "https://www.googleapis.com/auth/calendar.events";
 
