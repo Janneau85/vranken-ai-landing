@@ -13,6 +13,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type CalendarAssignment = {
   id: string;
@@ -22,8 +32,15 @@ type CalendarAssignment = {
   created_at: string;
 };
 
+type UserProfile = {
+  id: string;
+  name: string | null;
+  email?: string;
+};
+
 export default function AdminCalendars() {
   const [assignments, setAssignments] = useState<CalendarAssignment[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState("");
   const [calendarId, setCalendarId] = useState("");
@@ -31,8 +48,12 @@ export default function AdminCalendars() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchAssignments();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    await Promise.all([fetchAssignments(), fetchUsers()]);
+  };
 
   const fetchAssignments = async () => {
     try {
@@ -52,6 +73,31 @@ export default function AdminCalendars() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'list' }
+      });
+
+      if (error) throw error;
+      
+      if (data?.users) {
+        setUsers(data.users.map((u: any) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        title: "Fout",
+        description: "Kan gebruikers niet laden",
+        variant: "destructive",
+      });
     }
   };
 
@@ -124,24 +170,45 @@ export default function AdminCalendars() {
     return <div className="p-8">Laden...</div>;
   }
 
+  const getUserName = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    return user?.name || user?.email || 'Onbekende gebruiker';
+  };
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Kalender Beheer</h1>
 
-      <div className="bg-card p-6 rounded-lg shadow mb-8">
-        <h2 className="text-xl font-semibold mb-4">Wijs Kalender Toe aan Gebruiker</h2>
-        <div className="grid gap-4">
+      <Alert className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Alleen admins kunnen kalenders toewijzen aan gebruikers. Om te weten welke kalender IDs beschikbaar zijn voor een gebruiker, 
+          vraag de gebruiker om in te loggen in hun Google Calendar en de kalender instellingen te bekijken, of gebruik 'primary' voor hun hoofdkalender.
+        </AlertDescription>
+      </Alert>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Wijs Kalender Toe aan Gebruiker</CardTitle>
+          <CardDescription>
+            Selecteer een gebruiker en voer de Google Kalender details in
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
           <div>
-            <Label htmlFor="userId">Gebruikers ID</Label>
-            <Input
-              id="userId"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="Voer gebruiker UUID in"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Tip: Ga naar Users & Roles om gebruikers IDs te vinden
-            </p>
+            <Label htmlFor="userId">Selecteer Gebruiker</Label>
+            <Select value={userId} onValueChange={setUserId}>
+              <SelectTrigger id="userId">
+                <SelectValue placeholder="Kies een gebruiker..." />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name || user.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="calendarId">Google Kalender ID</Label>
@@ -149,10 +216,10 @@ export default function AdminCalendars() {
               id="calendarId"
               value={calendarId}
               onChange={(e) => setCalendarId(e.target.value)}
-              placeholder="bijv. primary of kalender@group.calendar.google.com"
+              placeholder="bijv. primary of daphnepaes3@gmail.com"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Gebruik 'primary' voor de hoofdkalender of een specifieke kalender ID
+              Gebruik 'primary' voor hoofdkalender, of een email adres / kalender ID zoals 'daphnepaes3@gmail.com', 'janneau@gmail.com', etc.
             </p>
           </div>
           <div>
@@ -161,52 +228,68 @@ export default function AdminCalendars() {
               id="calendarName"
               value={calendarName}
               onChange={(e) => setCalendarName(e.target.value)}
-              placeholder="bijv. Werk Kalender"
+              placeholder="bijv. Daphne, Janneau, AI, etc."
             />
           </div>
-          <Button onClick={handleAddAssignment}>Toewijzing Toevoegen</Button>
-        </div>
-      </div>
+          <Button onClick={handleAddAssignment} disabled={!userId || !calendarId}>
+            Toewijzing Toevoegen
+          </Button>
+        </CardContent>
+      </Card>
 
-      <div className="bg-card p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Huidige Toewijzingen</h2>
-        {assignments.length === 0 ? (
-          <p className="text-muted-foreground">Nog geen kalender toewijzingen.</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Gebruikers ID</TableHead>
-                <TableHead>Kalender ID</TableHead>
-                <TableHead>Kalender Naam</TableHead>
-                <TableHead>Acties</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assignments.map((assignment) => (
-                <TableRow key={assignment.id}>
-                  <TableCell className="font-mono text-sm">
-                    {assignment.user_id.substring(0, 8)}...
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{assignment.calendar_id}</Badge>
-                  </TableCell>
-                  <TableCell>{assignment.calendar_name || "-"}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleRemoveAssignment(assignment.id)}
-                    >
-                      Verwijder
-                    </Button>
-                  </TableCell>
+      <Card>
+        <CardHeader>
+          <CardTitle>Huidige Toewijzingen</CardTitle>
+          <CardDescription>Overzicht van alle kalender toewijzingen per gebruiker</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {assignments.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">Nog geen kalender toewijzingen.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Gebruiker</TableHead>
+                  <TableHead>Kalender ID</TableHead>
+                  <TableHead>Kalender Naam</TableHead>
+                  <TableHead className="text-right">Acties</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+              </TableHeader>
+              <TableBody>
+                {assignments.map((assignment) => (
+                  <TableRow key={assignment.id}>
+                    <TableCell className="font-medium">
+                      {getUserName(assignment.user_id)}
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {assignment.user_id.substring(0, 8)}...
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{assignment.calendar_id}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {assignment.calendar_name ? (
+                        <span className="font-medium">{assignment.calendar_name}</span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleRemoveAssignment(assignment.id)}
+                      >
+                        Verwijder
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

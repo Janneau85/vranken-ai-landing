@@ -132,13 +132,10 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <div 
-              onClick={() => navigate("/my-calendars")}
-              className="p-6 bg-card border border-border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
-            >
-              <h3 className="text-xl font-semibold mb-2 text-foreground">Mijn Kalenders</h3>
+            <div className="p-6 bg-card border border-border rounded-lg">
+              <h3 className="text-xl font-semibold mb-2 text-foreground">Events & Planning</h3>
               <p className="text-muted-foreground">
-                Beheer welke Google Calendars je wilt zien.
+                Bekijk je familie agenda en aankomende events.
               </p>
             </div>
           </div>
