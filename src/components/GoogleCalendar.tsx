@@ -35,6 +35,10 @@ const GoogleCalendar = () => {
     
     if (accessToken) {
       setIsConnected(true);
+      
+      // Sync tokens to database if not already there
+      syncTokensToDatabase(accessToken, refreshToken);
+      
       fetchEvents(accessToken, refreshToken);
     }
 
@@ -48,6 +52,42 @@ const GoogleCalendar = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  const syncTokensToDatabase = async (accessToken: string, refreshToken: string | null) => {
+    if (!refreshToken) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Check if tokens already exist in database
+      const { data: existingTokens } = await supabase
+        .from('google_tokens')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingTokens) return; // Already synced
+
+      // Store tokens in database
+      const expiresAt = localStorage.getItem('google_token_expires_at') || null;
+      
+      await supabase
+        .from('google_tokens')
+        .upsert({
+          user_id: user.id,
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_at: expiresAt,
+        }, {
+          onConflict: 'user_id'
+        });
+
+      console.log('Tokens synced to database');
+    } catch (error) {
+      console.error('Error syncing tokens to database:', error);
+    }
+  };
 
   const handleOAuthCallback = async (code: string) => {
     try {
