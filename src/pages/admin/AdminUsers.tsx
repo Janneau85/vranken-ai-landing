@@ -30,79 +30,89 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Pencil } from "lucide-react";
-import type { Tables } from "@/integrations/supabase/types";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const nameSchema = z.string()
   .trim()
   .min(1, { message: "Naam mag niet leeg zijn" })
   .max(100, { message: "Naam mag maximaal 100 tekens zijn" });
 
-type UserRole = Tables<"user_roles">;
+const emailSchema = z.string().trim().email({ message: "Ongeldig e-mailadres" });
 
-interface UserWithRoles {
-  user_id: string;
+const passwordSchema = z.string()
+  .min(6, { message: "Wachtwoord moet minimaal 6 tekens zijn" });
+
+interface User {
+  id: string;
   email: string;
   name: string | null;
   roles: string[];
+  created_at: string;
+  email_confirmed_at: string | null;
 }
 
 const AdminUsers = () => {
   const { toast } = useToast();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [selectedRole, setSelectedRole] = useState<string>("");
-  const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
-  const [editName, setEditName] = useState<string>("");
+  
+  // Create user dialog
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  
+  // Edit user dialog
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editEmail, setEditEmail] = useState("");
+  const [editName, setEditName] = useState("");
+  
+  // Role management dialog
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [roleUser, setRoleUser] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  
+  // Delete confirmation
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const fetchUsers = async () => {
     try {
-      // Get all user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
 
-      if (rolesError) throw rolesError;
-
-      // Group roles by user_id
-      const usersMap = new Map<string, UserWithRoles>();
-      
-      rolesData?.forEach((role: UserRole) => {
-        if (!usersMap.has(role.user_id)) {
-          usersMap.set(role.user_id, {
-            user_id: role.user_id,
-            email: "",
-            name: null,
-            roles: []
-          });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
         }
-        usersMap.get(role.user_id)!.roles.push(role.role);
-      });
+      );
 
-      // Fetch profile data for all users
-      const userIds = Array.from(usersMap.keys());
-      if (userIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, name")
-          .in("id", userIds);
-
-        profilesData?.forEach((profile) => {
-          const user = usersMap.get(profile.id);
-          if (user) {
-            user.name = profile.name;
-          }
-        });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch users");
       }
 
-      setUsers(Array.from(usersMap.values()));
-    } catch (error) {
+      const { users: fetchedUsers } = await response.json();
+      setUsers(fetchedUsers);
+    } catch (error: any) {
       console.error("Error fetching users:", error);
       toast({
         title: "Fout",
-        description: "Kan gebruikers niet laden",
+        description: error.message || "Kan gebruikers niet laden",
         variant: "destructive",
       });
     } finally {
@@ -114,22 +124,71 @@ const AdminUsers = () => {
     fetchUsers();
   }, []);
 
-  const handleAddRole = async () => {
-    if (!selectedUserId || !selectedRole) {
-      toast({
-        title: "Fout",
-        description: "Selecteer zowel gebruiker als rol",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleCreateUser = async () => {
+    try {
+      emailSchema.parse(newUserEmail);
+      passwordSchema.parse(newUserPassword);
+      if (newUserName) nameSchema.parse(newUserName);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: newUserEmail,
+            password: newUserPassword,
+            name: newUserName,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create user");
+      }
+
+      toast({
+        title: "Gelukt",
+        description: "Gebruiker succesvol aangemaakt",
+      });
+
+      setIsCreateDialogOpen(false);
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserName("");
+      fetchUsers();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validatiefout",
+          description: error.issues[0].message,
+          variant: "destructive",
+        });
+      } else {
+        console.error("Error creating user:", error);
+        toast({
+          title: "Fout",
+          description: error.message || "Kan gebruiker niet aanmaken",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleAddRole = async (userId: string, role: string) => {
     try {
       const { error } = await supabase
         .from("user_roles")
         .insert({
-          user_id: selectedUserId,
-          role: selectedRole as "admin" | "user",
+          user_id: userId,
+          role: role as "admin" | "user",
         });
 
       if (error) throw error;
@@ -139,7 +198,6 @@ const AdminUsers = () => {
         description: "Rol succesvol toegevoegd",
       });
 
-      setSelectedUserId("");
       setSelectedRole("");
       fetchUsers();
     } catch (error: any) {
@@ -178,28 +236,46 @@ const AdminUsers = () => {
     }
   };
 
-  const openEditDialog = (user: UserWithRoles) => {
+  const openEditDialog = (user: User) => {
     setEditingUser(user);
+    setEditEmail(user.email);
     setEditName(user.name || "");
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateName = async () => {
+  const handleUpdateUser = async () => {
     if (!editingUser) return;
 
     try {
-      const validatedName = nameSchema.parse(editName);
+      emailSchema.parse(editEmail);
+      if (editName) nameSchema.parse(editName);
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ name: validatedName })
-        .eq("id", editingUser.user_id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
 
-      if (error) throw error;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users/${editingUser.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: editEmail,
+            name: editName,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update user");
+      }
 
       toast({
         title: "Gelukt",
-        description: "Naam succesvol bijgewerkt",
+        description: "Gebruiker succesvol bijgewerkt",
       });
 
       setIsEditDialogOpen(false);
@@ -212,13 +288,71 @@ const AdminUsers = () => {
           variant: "destructive",
         });
       } else {
-        console.error("Error updating name:", error);
+        console.error("Error updating user:", error);
         toast({
           title: "Fout",
-          description: error.message || "Kan naam niet bijwerken",
+          description: error.message || "Kan gebruiker niet bijwerken",
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const openRoleDialog = (user: User) => {
+    setRoleUser(user);
+    setSelectedRole("");
+    setIsRoleDialogOpen(true);
+  };
+
+  const handleRoleDialogSubmit = async () => {
+    if (!roleUser || !selectedRole) return;
+    await handleAddRole(roleUser.id, selectedRole);
+    setIsRoleDialogOpen(false);
+    setRoleUser(null);
+  };
+
+  const confirmDelete = (user: User) => {
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users/${userToDelete.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete user");
+      }
+
+      toast({
+        title: "Gelukt",
+        description: "Gebruiker succesvol verwijderd",
+      });
+
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Fout",
+        description: error.message || "Kan gebruiker niet verwijderen",
+        variant: "destructive",
+      });
     }
   };
 
@@ -228,67 +362,72 @@ const AdminUsers = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground">Gebruikersbeheer</h2>
-        <p className="text-muted-foreground mt-2">
-          Beheer gebruikersrollen en permissies
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-foreground">Gebruikersbeheer</h2>
+          <p className="text-muted-foreground mt-2">
+            Beheer gebruikers, rollen en permissies
+          </p>
+        </div>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Nieuwe Gebruiker
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Rol Toewijzen aan Gebruiker</CardTitle>
-          <CardDescription>Wijs admin of user rollen toe</CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          <input
-            type="text"
-            placeholder="User ID (UUID)"
-            value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
-            className="flex-1 px-3 py-2 bg-background border border-border rounded-md"
-          />
-          <Select value={selectedRole} onValueChange={setSelectedRole}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Selecteer rol" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="user">User</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={handleAddRole}>Rol Toevoegen</Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Gebruikers & Rollen</CardTitle>
-          <CardDescription>Huidige gebruikersrol toewijzingen</CardDescription>
+          <CardTitle>Alle Gebruikers</CardTitle>
+          <CardDescription>Overzicht van alle gebruikers in het systeem</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Naam</TableHead>
-                <TableHead>User ID</TableHead>
-                <TableHead>Roles</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Rollen</TableHead>
+                <TableHead>Aangemaakt</TableHead>
+                <TableHead className="text-right">Acties</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     Geen gebruikers gevonden
                   </TableCell>
                 </TableRow>
               ) : (
                 users.map((user) => (
-                  <TableRow key={user.user_id}>
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">
+                      {user.name || "Geen naam"}
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{user.name || "Geen naam"}</span>
+                      <div className="flex gap-2 flex-wrap">
+                        {user.roles.length > 0 ? (
+                          <>
+                            {user.roles.map((role) => (
+                              <Badge
+                                key={role}
+                                variant={role === "admin" ? "default" : "secondary"}
+                              >
+                                {role}
+                              </Badge>
+                            ))}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Geen rollen</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(user.created_at).toLocaleDateString('nl-NL')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2 justify-end">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -296,35 +435,20 @@ const AdminUsers = () => {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {user.user_id.slice(0, 8)}...
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {user.roles.map((role) => (
-                          <Badge
-                            key={role}
-                            variant={role === "admin" ? "default" as const : "secondary" as const}
-                          >
-                            {role}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {user.roles.map((role) => (
-                          <Button
-                            key={role}
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRemoveRole(user.user_id, role)}
-                          >
-                            Verwijder {role}
-                          </Button>
-                        ))}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openRoleDialog(user)}
+                        >
+                          Rollen
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => confirmDelete(user)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -335,19 +459,82 @@ const AdminUsers = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      {/* Create User Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Gebruikersnaam Bewerken</DialogTitle>
+            <DialogTitle>Nieuwe Gebruiker Aanmaken</DialogTitle>
             <DialogDescription>
-              Wijzig de naam van de gebruiker
+              Maak een nieuwe gebruiker aan met email en wachtwoord
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Naam</Label>
+              <Label htmlFor="new-email">Email *</Label>
               <Input
-                id="name"
+                id="new-email"
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="gebruiker@voorbeeld.nl"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="new-password">Wachtwoord *</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                placeholder="Minimaal 6 tekens"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="new-name">Naam</Label>
+              <Input
+                id="new-name"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                placeholder="Voer naam in"
+                maxLength={100}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Annuleren
+            </Button>
+            <Button onClick={handleCreateUser}>
+              Aanmaken
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gebruiker Bewerken</DialogTitle>
+            <DialogDescription>
+              Wijzig de gegevens van de gebruiker
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="gebruiker@voorbeeld.nl"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Naam</Label>
+              <Input
+                id="edit-name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Voer naam in"
@@ -359,12 +546,90 @@ const AdminUsers = () => {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Annuleren
             </Button>
-            <Button onClick={handleUpdateName}>
+            <Button onClick={handleUpdateUser}>
               Opslaan
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Role Management Dialog */}
+      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rollen Beheren</DialogTitle>
+            <DialogDescription>
+              Beheer rollen voor {roleUser?.name || roleUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Huidige Rollen</Label>
+              <div className="flex gap-2 flex-wrap">
+                {roleUser?.roles.length ? (
+                  roleUser.roles.map((role) => (
+                    <div key={role} className="flex items-center gap-2">
+                      <Badge variant={role === "admin" ? "default" : "secondary"}>
+                        {role}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveRole(roleUser.id, role)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground text-sm">Geen rollen</span>
+                )}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role-select">Rol Toevoegen</Label>
+              <div className="flex gap-2">
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer rol" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleRoleDialogSubmit} disabled={!selectedRole}>
+                  Toevoegen
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
+              Sluiten
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Weet je het zeker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deze actie kan niet ongedaan worden gemaakt. Dit verwijdert permanent de gebruiker{" "}
+              <span className="font-medium">{userToDelete?.email}</span> en alle bijbehorende gegevens.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground">
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
