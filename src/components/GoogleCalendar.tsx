@@ -24,7 +24,7 @@ interface GoogleCalendarProps {
 
 const GOOGLE_CLIENT_ID = "180123280397-g3ulpf9rv6cetrlrh8veg3pmdkba9u3m.apps.googleusercontent.com";
 const REDIRECT_URI = window.location.origin + "/dashboard";
-const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+const SCOPES = "https://www.googleapis.com/auth/calendar.events";
 
 const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
