@@ -27,7 +27,7 @@ interface Todo {
   due_date: string | null;
   assigned_to: string | null;
   created_at: string;
-  notes: string | null;
+  notes?: string | null;
 }
 
 interface Profile {

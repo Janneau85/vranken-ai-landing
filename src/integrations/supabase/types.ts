@@ -367,6 +367,7 @@ export type Database = {
           id: string
           is_recurring: boolean | null
           next_recurrence_date: string | null
+          notes: string | null
           priority: string | null
           recurrence_days: number[] | null
           recurrence_pattern: string | null
@@ -386,6 +387,7 @@ export type Database = {
           id?: string
           is_recurring?: boolean | null
           next_recurrence_date?: string | null
+          notes?: string | null
           priority?: string | null
           recurrence_days?: number[] | null
           recurrence_pattern?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           id?: string
           is_recurring?: boolean | null
           next_recurrence_date?: string | null
+          notes?: string | null
           priority?: string | null
           recurrence_days?: number[] | null
           recurrence_pattern?: string | null
