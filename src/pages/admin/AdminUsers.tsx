@@ -89,25 +89,14 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'GET',
+      });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      if (error) throw error;
+      if (!data) throw new Error("No data returned");
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to fetch users");
-      }
-
-      const { users: fetchedUsers } = await response.json();
-      setUsers(fetchedUsers);
+      setUsers(data.users);
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast({
@@ -130,29 +119,15 @@ const AdminUsers = () => {
       passwordSchema.parse(newUserPassword);
       if (newUserName) nameSchema.parse(newUserName);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          email: newUserEmail,
+          password: newUserPassword,
+          name: newUserName,
+        },
+      });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: newUserEmail,
-            password: newUserPassword,
-            name: newUserName,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create user");
-      }
+      if (error) throw error;
 
       toast({
         title: "Gelukt",
@@ -250,28 +225,26 @@ const AdminUsers = () => {
       emailSchema.parse(editEmail);
       if (editName) nameSchema.parse(editName);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
+      // Update via edge function
+      const { data, error } = await supabase.functions.invoke(`admin-users/${editingUser.id}`, {
+        method: 'PATCH',
+        body: {
+          email: editEmail,
+          name: editName,
+        },
+      });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users/${editingUser.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: editEmail,
-            name: editName,
-          }),
-        }
-      );
+      if (error) throw error;
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to update user");
-      }
+      // Also update profile table directly
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: editingUser.id,
+          name: editName,
+        });
+
+      if (profileError) throw profileError;
 
       toast({
         title: "Gelukt",
@@ -320,23 +293,11 @@ const AdminUsers = () => {
     if (!userToDelete) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
+      const { data, error } = await supabase.functions.invoke(`admin-users/${userToDelete.id}`, {
+        method: 'DELETE',
+      });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users/${userToDelete.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete user");
-      }
+      if (error) throw error;
 
       toast({
         title: "Gelukt",
