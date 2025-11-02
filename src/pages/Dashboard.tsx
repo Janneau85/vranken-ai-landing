@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
+import GoogleCalendar from "@/components/GoogleCalendar";
 import type { User } from "@supabase/supabase-js";
 
 const Dashboard = () => {
@@ -118,13 +119,10 @@ const Dashboard = () => {
                 Share and view family photos and memories.
               </p>
             </div>
+          </div>
 
-            <div className="p-6 bg-card border border-border rounded-lg">
-              <h3 className="text-xl font-semibold mb-2 text-foreground">Calendar</h3>
-              <p className="text-muted-foreground">
-                Keep track of family events and gatherings.
-              </p>
-            </div>
+          <div className="mt-8">
+            <GoogleCalendar />
           </div>
         </div>
       </main>
