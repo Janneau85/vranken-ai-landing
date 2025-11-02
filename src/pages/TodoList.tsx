@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, CheckSquare, AlertCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, Plus, CheckSquare, AlertCircle, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
 import { format } from "date-fns";
@@ -48,6 +49,8 @@ const TodoList = () => {
   const [filterStatus, setFilterStatus] = useState<string>("open");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [syncToCalendar, setSyncToCalendar] = useState(true);
+  const [hasTodoCalendar, setHasTodoCalendar] = useState(false);
   const [newTodo, setNewTodo] = useState({
     title: "",
     description: "",
@@ -61,8 +64,25 @@ const TodoList = () => {
     checkAuth();
     fetchTodos();
     fetchProfiles();
+    checkTodoCalendarConfig();
     setupRealtimeSubscription();
   }, []);
+
+  const checkTodoCalendarConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("todo_calendar_config")
+        .select("*")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+      setHasTodoCalendar(!!data);
+    } catch (error) {
+      console.error("Error checking todo calendar config:", error);
+      setHasTodoCalendar(false);
+    }
+  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -132,7 +152,7 @@ const TodoList = () => {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase
+      const { data: insertedTodo, error } = await supabase
         .from("todos")
         .insert({
           title: newTodo.title,
@@ -143,11 +163,36 @@ const TodoList = () => {
           assigned_to: newTodo.assigned_to || null,
           created_by: user?.id,
           status: "open"
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
       
-      toast.success("Taak toegevoegd!");
+      // Sync to calendar if enabled and configured
+      if (syncToCalendar && hasTodoCalendar && insertedTodo) {
+        try {
+          const { error: syncError } = await supabase.functions.invoke('sync-todos-to-calendar', {
+            body: { 
+              action: 'create_event',
+              todoId: insertedTodo.id
+            }
+          });
+
+          if (syncError) {
+            console.error('Calendar sync error:', syncError);
+            toast.warning("Todo toegevoegd, maar niet gesynchroniseerd naar kalender");
+          } else {
+            toast.success("Todo toegevoegd en gesynchroniseerd naar kalender!");
+          }
+        } catch (syncError) {
+          console.error('Calendar sync error:', syncError);
+          toast.warning("Todo toegevoegd, maar niet gesynchroniseerd naar kalender");
+        }
+      } else {
+        toast.success("Taak toegevoegd!");
+      }
+      
       setIsAddDialogOpen(false);
       setNewTodo({
         title: "",
@@ -178,6 +223,20 @@ const TodoList = () => {
         .eq("id", todo.id);
 
       if (error) throw error;
+
+      // Delete from calendar when completed
+      if (newStatus === "completed" && hasTodoCalendar) {
+        try {
+          await supabase.functions.invoke('sync-todos-to-calendar', {
+            body: { 
+              action: 'delete_event',
+              todoId: todo.id
+            }
+          });
+        } catch (syncError) {
+          console.error('Calendar delete error:', syncError);
+        }
+      }
     } catch (error) {
       console.error("Error toggling todo:", error);
       toast.error("Fout bij aanpassen status");
@@ -337,6 +396,19 @@ const TodoList = () => {
                       </Select>
                     </div>
                   </div>
+                  {hasTodoCalendar && (
+                    <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted">
+                      <Switch
+                        id="sync-calendar"
+                        checked={syncToCalendar}
+                        onCheckedChange={setSyncToCalendar}
+                      />
+                      <Label htmlFor="sync-calendar" className="flex items-center gap-2 cursor-pointer">
+                        <Calendar className="h-4 w-4" />
+                        Synchroniseer naar Google Calendar
+                      </Label>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>

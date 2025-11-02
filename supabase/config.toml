@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.todo-automation]
 verify_jwt = false
+
+[functions.sync-todos-to-calendar]
+verify_jwt = false

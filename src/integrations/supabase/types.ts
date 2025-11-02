@@ -294,6 +294,33 @@ export type Database = {
         }
         Relationships: []
       }
+      todo_calendar_config: {
+        Row: {
+          calendar_id: string
+          calendar_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          calendar_id: string
+          calendar_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          calendar_id?: string
+          calendar_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       todo_templates: {
         Row: {
           category: string | null
