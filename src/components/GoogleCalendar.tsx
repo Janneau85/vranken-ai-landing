@@ -175,7 +175,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
     window.location.href = authUrl;
   };
 
-  const fetchEvents = async (accessToken: string, refreshToken: string | null) => {
+  const fetchEvents = async (accessToken: string, refreshToken: string | null, isRetry = false) => {
     try {
       setLoading(true);
 
@@ -201,12 +201,22 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
       }
 
       // Fetch list of calendars to get colors
-      const { data: calendarListData } = await supabase.functions.invoke('google-calendar', {
+      const { data: calendarListData, error: listError } = await supabase.functions.invoke('google-calendar', {
         body: {
           action: 'list_calendars',
           accessToken,
         },
       });
+
+      // If we get a 401 error, try to refresh token
+      if (listError && !isRetry && refreshToken) {
+        console.log('Token expired, refreshing...');
+        const newToken = await refreshAccessToken(refreshToken);
+        if (newToken) {
+          return fetchEvents(newToken, refreshToken, true);
+        }
+        throw new Error('Failed to refresh token');
+      }
 
       const calendarColors = new Map();
       if (calendarListData?.calendars) {
@@ -232,6 +242,14 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
 
         if (error) {
           console.error(`Error fetching calendar ${assignment.calendar_id}:`, error);
+          
+          // If 401 error on first calendar, try to refresh token
+          if (allEvents.length === 0 && !isRetry && refreshToken) {
+            const newToken = await refreshAccessToken(refreshToken);
+            if (newToken) {
+              return fetchEvents(newToken, refreshToken, true);
+            }
+          }
           continue;
         }
         
@@ -258,26 +276,22 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
     } catch (error) {
       console.error('Error fetching events:', error);
       
-      // If token expired, try to refresh
-      const refreshToken = localStorage.getItem('google_refresh_token');
-      if (refreshToken) {
-        await refreshAccessToken(refreshToken);
-      } else {
-        toast({
-          title: "Session expired",
-          description: "Please reconnect your Google Calendar.",
-          variant: "destructive",
-        });
-        setIsConnected(false);
-        localStorage.removeItem('google_access_token');
-      }
+      toast({
+        title: "Fout bij laden",
+        description: "Kon evenementen niet laden. Probeer opnieuw te koppelen.",
+        variant: "destructive",
+      });
+      setIsConnected(false);
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_refresh_token');
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshAccessToken = async (refreshToken: string) => {
+  const refreshAccessToken = async (refreshToken: string): Promise<string | null> => {
     try {
+      console.log('Refreshing access token...');
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: {
           action: 'refresh_token',
@@ -289,13 +303,34 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
 
       if (data?.access_token) {
         localStorage.setItem('google_access_token', data.access_token);
-        await fetchEvents(data.access_token, refreshToken);
+        
+        // Also update in database
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const expiresAt = data.expires_in 
+            ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+            : null;
+            
+          await supabase
+            .from('google_tokens')
+            .update({
+              access_token: data.access_token,
+              expires_at: expiresAt,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user.id);
+        }
+        
+        console.log('Token successfully refreshed');
+        return data.access_token;
       }
+      return null;
     } catch (error) {
       console.error('Token refresh error:', error);
       setIsConnected(false);
       localStorage.removeItem('google_access_token');
       localStorage.removeItem('google_refresh_token');
+      return null;
     }
   };
 
