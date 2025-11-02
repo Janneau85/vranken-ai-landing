@@ -31,6 +31,8 @@ const ShoppingList = () => {
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [keepDialogOpen, setKeepDialogOpen] = useState(false);
+  const [itemCounter, setItemCounter] = useState(0);
   const [newItem, setNewItem] = useState({
     name: "",
     quantity: "",
@@ -90,7 +92,7 @@ const ShoppingList = () => {
     };
   };
 
-  const handleAddItem = async () => {
+  const handleAddItem = async (keepOpen: boolean = false) => {
     if (!newItem.name.trim()) {
       toast.error("Voeg een naam toe");
       return;
@@ -110,12 +112,40 @@ const ShoppingList = () => {
 
       if (error) throw error;
       
-      toast.success("Item toegevoegd!");
-      setIsAddDialogOpen(false);
-      setNewItem({ name: "", quantity: "", category: "", notes: "" });
+      const newCounter = itemCounter + 1;
+      setItemCounter(newCounter);
+      toast.success(`Item ${newCounter} toegevoegd!`);
+      
+      if (keepOpen) {
+        // Reset form but keep dialog open
+        setNewItem({ name: "", quantity: "", category: "", notes: "" });
+        // Focus back on name field
+        setTimeout(() => {
+          document.getElementById('name')?.focus();
+        }, 100);
+      } else {
+        // Close dialog and reset
+        setIsAddDialogOpen(false);
+        setNewItem({ name: "", quantity: "", category: "", notes: "" });
+        setItemCounter(0);
+      }
     } catch (error) {
       console.error("Error adding item:", error);
       toast.error("Fout bij toevoegen van item");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (e.ctrlKey || e.metaKey) {
+        // Ctrl/Cmd + Enter = Save & New
+        e.preventDefault();
+        handleAddItem(true);
+      } else {
+        // Just Enter = Save & Close
+        e.preventDefault();
+        handleAddItem(false);
+      }
     }
   };
 
@@ -235,7 +265,7 @@ const ShoppingList = () => {
                 <DialogHeader>
                   <DialogTitle>Nieuw Item</DialogTitle>
                   <DialogDescription>
-                    Voeg een item toe aan de boodschappenlijst
+                    Voeg items toe aan de boodschappenlijst
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -245,7 +275,9 @@ const ShoppingList = () => {
                       id="name"
                       value={newItem.name}
                       onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                      onKeyDown={handleKeyDown}
                       placeholder="Bijv. Melk"
+                      autoFocus
                     />
                   </div>
                   <div className="grid gap-2">
@@ -254,6 +286,7 @@ const ShoppingList = () => {
                       id="quantity"
                       value={newItem.quantity}
                       onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
+                      onKeyDown={handleKeyDown}
                       placeholder="Bijv. 2 liter"
                     />
                   </div>
@@ -281,12 +314,25 @@ const ShoppingList = () => {
                       placeholder="Extra notities..."
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Tip: <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Enter</kbd> om toe te voegen & sluiten, 
+                    <kbd className="px-1 py-0.5 bg-muted rounded text-xs ml-1">Ctrl+Enter</kbd> om door te gaan met toevoegen
+                  </p>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setIsAddDialogOpen(false);
+                    setItemCounter(0);
+                  }}>
                     Annuleren
                   </Button>
-                  <Button onClick={handleAddItem}>Toevoegen</Button>
+                  <Button onClick={() => handleAddItem(false)}>
+                    Toevoegen & Sluiten
+                  </Button>
+                  <Button onClick={() => handleAddItem(true)} variant="secondary">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Toevoegen & Nieuwe
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

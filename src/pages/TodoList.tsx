@@ -52,6 +52,8 @@ const TodoList = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [syncToCalendar, setSyncToCalendar] = useState(true);
   const [hasTodoCalendar, setHasTodoCalendar] = useState(false);
+  const [keepDialogOpen, setKeepDialogOpen] = useState(false);
+  const [itemCounter, setItemCounter] = useState(0);
   const [newTodo, setNewTodo] = useState({
     title: "",
     description: "",
@@ -145,7 +147,7 @@ const TodoList = () => {
     };
   };
 
-  const handleAddTodo = async () => {
+  const handleAddTodo = async (keepOpen: boolean = false) => {
     if (!newTodo.title.trim()) {
       toast.error("Voeg een titel toe");
       return;
@@ -170,6 +172,9 @@ const TodoList = () => {
 
       if (error) throw error;
       
+      const newCounter = itemCounter + 1;
+      setItemCounter(newCounter);
+      
       // Sync to calendar if enabled and configured
       if (syncToCalendar && hasTodoCalendar && insertedTodo) {
         try {
@@ -182,30 +187,64 @@ const TodoList = () => {
 
           if (syncError) {
             console.error('Calendar sync error:', syncError);
-            toast.warning("Todo toegevoegd, maar niet gesynchroniseerd naar kalender");
+            toast.warning(`Taak ${newCounter} toegevoegd, maar niet gesynchroniseerd naar kalender`);
           } else {
-            toast.success("Todo toegevoegd en gesynchroniseerd naar kalender!");
+            toast.success(`Taak ${newCounter} toegevoegd en gesynchroniseerd naar kalender!`);
           }
         } catch (syncError) {
           console.error('Calendar sync error:', syncError);
-          toast.warning("Todo toegevoegd, maar niet gesynchroniseerd naar kalender");
+          toast.warning(`Taak ${newCounter} toegevoegd, maar niet gesynchroniseerd naar kalender`);
         }
       } else {
-        toast.success("Taak toegevoegd!");
+        toast.success(`Taak ${newCounter} toegevoegd!`);
       }
       
-      setIsAddDialogOpen(false);
-      setNewTodo({
-        title: "",
-        description: "",
-        category: "",
-        priority: "medium",
-        due_date: "",
-        assigned_to: ""
-      });
+      if (keepOpen) {
+        // Reset form but keep dialog open
+        setNewTodo({
+          title: "",
+          description: "",
+          category: "",
+          priority: "medium",
+          due_date: "",
+          assigned_to: ""
+        });
+        setSyncToCalendar(true); // Reset to default
+        // Focus back on title field
+        setTimeout(() => {
+          document.getElementById('title')?.focus();
+        }, 100);
+      } else {
+        // Close dialog and reset
+        setIsAddDialogOpen(false);
+        setNewTodo({
+          title: "",
+          description: "",
+          category: "",
+          priority: "medium",
+          due_date: "",
+          assigned_to: ""
+        });
+        setSyncToCalendar(true);
+        setItemCounter(0);
+      }
     } catch (error) {
       console.error("Error adding todo:", error);
       toast.error("Fout bij toevoegen van taak");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.ctrlKey || e.metaKey) {
+        // Ctrl/Cmd + Enter = Save & New
+        e.preventDefault();
+        handleAddTodo(true);
+      } else if (e.target instanceof HTMLInputElement) {
+        // Just Enter on input = Save & Close
+        e.preventDefault();
+        handleAddTodo(false);
+      }
     }
   };
 
@@ -333,7 +372,7 @@ const TodoList = () => {
                 <DialogHeader>
                   <DialogTitle>Nieuwe Taak</DialogTitle>
                   <DialogDescription>
-                    Voeg een nieuwe taak toe aan de lijst
+                    Voeg taken toe aan de lijst
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -343,7 +382,9 @@ const TodoList = () => {
                       id="title"
                       value={newTodo.title}
                       onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
+                      onKeyDown={handleKeyDown}
                       placeholder="Bijv. Stofzuigen woonkamer"
+                      autoFocus
                     />
                   </div>
                   <div className="grid gap-2">
@@ -391,6 +432,7 @@ const TodoList = () => {
                         type="date"
                         value={newTodo.due_date}
                         onChange={(e) => setNewTodo({ ...newTodo, due_date: e.target.value })}
+                        onKeyDown={handleKeyDown}
                       />
                     </div>
                     <div className="grid gap-2">
@@ -422,12 +464,25 @@ const TodoList = () => {
                       </Label>
                     </div>
                   )}
+                  <p className="text-xs text-muted-foreground">
+                    Tip: <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Enter</kbd> om toe te voegen & sluiten, 
+                    <kbd className="px-1 py-0.5 bg-muted rounded text-xs ml-1">Ctrl+Enter</kbd> om door te gaan met toevoegen
+                  </p>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setIsAddDialogOpen(false);
+                    setItemCounter(0);
+                  }}>
                     Annuleren
                   </Button>
-                  <Button onClick={handleAddTodo}>Toevoegen</Button>
+                  <Button onClick={() => handleAddTodo(false)}>
+                    Toevoegen & Sluiten
+                  </Button>
+                  <Button onClick={() => handleAddTodo(true)} variant="secondary">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Toevoegen & Nieuwe
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

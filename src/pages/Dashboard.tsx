@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import GoogleCalendar from "@/components/GoogleCalendar";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { useUserTheme } from "@/hooks/useUserTheme";
-import { ShoppingCart, UtensilsCrossed, CheckSquare } from "lucide-react";
+import { ShoppingCart, CheckSquare, Plus } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const Dashboard = () => {
@@ -18,6 +18,8 @@ const Dashboard = () => {
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [shoppingCount, setShoppingCount] = useState(0);
+  const [todoCount, setTodoCount] = useState(0);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -54,12 +56,37 @@ const Dashboard = () => {
           _role: 'admin'
         });
         setIsAdmin(data || false);
+
+        // Fetch quick stats
+        fetchQuickStats();
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const fetchQuickStats = async () => {
+    try {
+      // Fetch shopping list count (unchecked items)
+      const { count: shoppingTotal } = await supabase
+        .from('shopping_list_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_checked', false);
+
+      setShoppingCount(shoppingTotal || 0);
+
+      // Fetch todo count (open items)
+      const { count: todoTotal } = await supabase
+        .from('todos')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'open');
+
+      setTodoCount(todoTotal || 0);
+    } catch (error) {
+      console.error('Error fetching quick stats:', error);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -122,43 +149,64 @@ const Dashboard = () => {
             Je persoonlijke Family Dashboard
           </p>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-4xl">
-            <Link to="/shopping">
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 max-w-5xl">
+            <Link to="/shopping" className="group">
               <div 
-                className="p-6 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg"
+                className="relative p-8 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
               >
-                <ShoppingCart className="w-8 h-8 mb-3" style={{ color: accentColor }} />
-                <h3 className="text-xl font-semibold mb-2 text-foreground">Boodschappenlijst</h3>
-                <p className="text-muted-foreground">
+                <button 
+                  className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/shopping');
+                  }}
+                >
+                  <Plus className="w-5 h-5" style={{ color: accentColor }} />
+                </button>
+                <ShoppingCart className="w-12 h-12 mb-4" style={{ color: accentColor }} />
+                <h3 className="text-2xl font-semibold mb-2 text-foreground">Boodschappenlijst</h3>
+                <p className="text-muted-foreground mb-3">
                   Gezamenlijke boodschappenlijst met real-time sync
                 </p>
+                {shoppingCount > 0 && (
+                  <div 
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                    style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
+                  >
+                    {shoppingCount} {shoppingCount === 1 ? 'item' : 'items'}
+                  </div>
+                )}
               </div>
             </Link>
 
-            <Link to="/meals">
+            <Link to="/todos" className="group">
               <div 
-                className="p-6 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg"
+                className="relative p-8 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
               >
-                <UtensilsCrossed className="w-8 h-8 mb-3" style={{ color: accentColor }} />
-                <h3 className="text-xl font-semibold mb-2 text-foreground">Maaltijdplanner</h3>
-                <p className="text-muted-foreground">
-                  Plan je maaltijden en beheer recepten
-                </p>
-              </div>
-            </Link>
-
-            <Link to="/todos">
-              <div 
-                className="p-6 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg"
-                style={{ borderColor: accentColor }}
-              >
-                <CheckSquare className="w-8 h-8 mb-3" style={{ color: accentColor }} />
-                <h3 className="text-xl font-semibold mb-2 text-foreground">Todo Lijst</h3>
-                <p className="text-muted-foreground">
+                <button 
+                  className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/todos');
+                  }}
+                >
+                  <Plus className="w-5 h-5" style={{ color: accentColor }} />
+                </button>
+                <CheckSquare className="w-12 h-12 mb-4" style={{ color: accentColor }} />
+                <h3 className="text-2xl font-semibold mb-2 text-foreground">Todo Lijst</h3>
+                <p className="text-muted-foreground mb-3">
                   Huishoudelijke taken en klusjes
                 </p>
+                {todoCount > 0 && (
+                  <div 
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                    style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
+                  >
+                    {todoCount} {todoCount === 1 ? 'taak' : 'taken'}
+                  </div>
+                )}
               </div>
             </Link>
           </div>

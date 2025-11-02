@@ -331,13 +331,13 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const next5Days = Array.from({ length: 5 }, (_, i) => {
+    const next10Days = Array.from({ length: 10 }, (_, i) => {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       return date;
     });
 
-    return next5Days.map(date => {
+    return next10Days.map(date => {
       const dayEvents = events.filter(event => {
         const eventDate = new Date(event.start.dateTime || event.start.date || '');
         eventDate.setHours(0, 0, 0, 0);
@@ -368,7 +368,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
                 Familie Agenda
               </CardTitle>
               <CardDescription>
-                Komende 5 dagen
+                Komende 10 dagen
               </CardDescription>
             </div>
             {isAdmin && (
@@ -416,7 +416,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
         ) : events.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 gap-y-4">
             {dayGroups.map(({ date, events: dayEvents }) => (
               <div key={date.toISOString()} className="border rounded-lg p-4 bg-card">
                 <div className="mb-3 pb-2 border-b">
