@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import Footer from "@/components/Footer";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { SwipeableItem } from "@/components/SwipeableItem";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Todo {
   id: string;
@@ -44,6 +46,7 @@ const priorities = [
 
 const TodoList = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -504,53 +507,80 @@ const TodoList = () => {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {filteredTodos.map((todo) => (
-                    <div
-                      key={todo.id}
-                      className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${
-                        todo.status === "completed"
-                          ? "bg-muted/50 border-border"
-                          : "bg-card border-border hover:border-primary"
-                      }`}
-                    >
-                      <Checkbox
-                        checked={todo.status === "completed"}
-                        onCheckedChange={() => handleToggleStatus(todo)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3 flex-wrap">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className={`w-2 h-2 rounded-full ${getPriorityColor(todo.priority)}`} />
-                              <h3 className={`font-semibold ${todo.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                                {todo.title}
-                              </h3>
-                            </div>
-                            {todo.description && (
-                              <p className="text-sm text-muted-foreground mb-2">
-                                {todo.description}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {todo.category && (
-                                <Badge variant="outline">{todo.category}</Badge>
+                  {filteredTodos.map((todo) => {
+                    const todoContent = (
+                      <div
+                        className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${
+                          todo.status === "completed"
+                            ? "bg-muted/50 border-border"
+                            : "bg-card border-border hover:border-primary"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={todo.status === "completed"}
+                          onCheckedChange={() => handleToggleStatus(todo)}
+                          className={`mt-1 ${isMobile ? 'h-6 w-6' : 'h-5 w-5'}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className={`w-2 h-2 rounded-full ${getPriorityColor(todo.priority)}`} />
+                                <h3 className={`font-semibold ${isMobile ? 'text-base' : ''} ${todo.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                  {todo.title}
+                                </h3>
+                              </div>
+                              {todo.description && (
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {todo.description}
+                                </p>
                               )}
-                              <span className="text-xs text-muted-foreground">
-                                👤 {getProfileName(todo.assigned_to)}
-                              </span>
-                              {todo.due_date && (
-                                <span className={`text-xs flex items-center gap-1 ${isOverdue(todo.due_date) && todo.status !== "completed" ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
-                                  {isOverdue(todo.due_date) && todo.status !== "completed" && <AlertCircle className="h-3 w-3" />}
-                                  📅 {format(new Date(todo.due_date), "d MMM yyyy", { locale: nl })}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {todo.category && (
+                                  <Badge variant="outline">{todo.category}</Badge>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  👤 {getProfileName(todo.assigned_to)}
                                 </span>
-                              )}
+                                {todo.due_date && (
+                                  <span className={`text-xs flex items-center gap-1 ${isOverdue(todo.due_date) && todo.status !== "completed" ? "text-red-500 font-medium" : "text-muted-foreground"}`}>
+                                    {isOverdue(todo.due_date) && todo.status !== "completed" && <AlertCircle className="h-3 w-3" />}
+                                    📅 {format(new Date(todo.due_date), "d MMM yyyy", { locale: nl })}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+
+                    return isMobile ? (
+                      <SwipeableItem
+                        key={todo.id}
+                        onDelete={async () => {
+                          try {
+                            const { error } = await supabase
+                              .from('todos')
+                              .delete()
+                              .eq('id', todo.id);
+
+                            if (error) throw error;
+                            toast.success("Taak verwijderd");
+                          } catch (error) {
+                            console.error('Error deleting todo:', error);
+                            toast.error("Fout bij verwijderen van taak");
+                          }
+                        }}
+                        onCheck={() => handleToggleStatus(todo)}
+                        isChecked={todo.status === "completed"}
+                      >
+                        {todoContent}
+                      </SwipeableItem>
+                    ) : (
+                      <div key={todo.id}>{todoContent}</div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

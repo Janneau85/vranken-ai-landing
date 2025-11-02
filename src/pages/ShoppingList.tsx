@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
+import { SwipeableItem } from "@/components/SwipeableItem";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ShoppingItem {
   id: string;
@@ -27,6 +29,7 @@ const categories = ["Groente", "Fruit", "Zuivel", "Vlees", "Vis", "Brood", "Dran
 
 const ShoppingList = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -361,49 +364,65 @@ const ShoppingList = () => {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {filteredItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                        item.is_checked 
-                          ? "bg-muted/50 border-border" 
-                          : "bg-card border-border hover:border-primary"
-                      }`}
-                    >
-                      <Checkbox
-                        checked={item.is_checked}
-                        onCheckedChange={() => handleToggleCheck(item)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className={`font-medium ${item.is_checked ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                              {getCategoryEmoji(item.category)} {item.name}
-                            </p>
-                            {item.quantity && (
-                              <p className="text-sm text-muted-foreground">
-                                {item.quantity}
+                  {filteredItems.map((item) => {
+                    const itemContent = (
+                      <div
+                        className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${
+                          item.is_checked 
+                            ? "bg-muted/50 border-border" 
+                            : "bg-card border-border hover:border-primary"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={item.is_checked}
+                          onCheckedChange={() => handleToggleCheck(item)}
+                          className={`mt-1 ${isMobile ? 'h-6 w-6' : 'h-5 w-5'}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className={`font-medium ${isMobile ? 'text-base' : ''} ${item.is_checked ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                {getCategoryEmoji(item.category)} {item.name}
                               </p>
-                            )}
-                            {item.notes && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {item.notes}
-                              </p>
+                              {item.quantity && (
+                                <p className="text-sm text-muted-foreground">
+                                  {item.quantity}
+                                </p>
+                              )}
+                              {item.notes && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {item.notes}
+                                </p>
+                              )}
+                            </div>
+                            {!isMobile && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteItem(item.id)}
+                                className="h-8 w-8"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             )}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="h-8 w-8"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+
+                    return isMobile ? (
+                      <SwipeableItem
+                        key={item.id}
+                        onDelete={() => handleDeleteItem(item.id)}
+                        onCheck={() => handleToggleCheck(item)}
+                        isChecked={item.is_checked}
+                      >
+                        {itemContent}
+                      </SwipeableItem>
+                    ) : (
+                      <div key={item.id}>{itemContent}</div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

@@ -15,6 +15,7 @@ import AdminCalendars from "./pages/admin/AdminCalendars";
 import AdminData from "./pages/admin/AdminData";
 import ShoppingList from "./pages/ShoppingList";
 import TodoList from "./pages/TodoList";
+import AIAssistant from "./pages/AIAssistant";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/shopping" element={<ShoppingList />} />
           <Route path="/todos" element={<TodoList />} />
+          <Route path="/ai-assistant" element={<AIAssistant />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />

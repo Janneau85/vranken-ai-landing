@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import GoogleCalendar from "@/components/GoogleCalendar";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { useUserTheme } from "@/hooks/useUserTheme";
-import { ShoppingCart, CheckSquare, Plus } from "lucide-react";
+import { ShoppingCart, CheckSquare, Plus, Bot } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const Dashboard = () => {
@@ -207,6 +207,28 @@ const Dashboard = () => {
                     {todoCount} {todoCount === 1 ? 'taak' : 'taken'}
                   </div>
                 )}
+              </div>
+            </Link>
+
+            <Link to="/ai-assistant" className="group">
+              <div 
+                className="relative p-8 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
+                style={{ borderColor: accentColor }}
+              >
+                <button 
+                  className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/ai-assistant');
+                  }}
+                >
+                  <Plus className="w-5 h-5" style={{ color: accentColor }} />
+                </button>
+                <Bot className="w-12 h-12 mb-4" style={{ color: accentColor }} />
+                <h3 className="text-2xl font-semibold mb-2 text-foreground">AI Assistent</h3>
+                <p className="text-muted-foreground mb-3">
+                  Chat met je slimme helper voor tips en hulp
+                </p>
               </div>
             </Link>
           </div>
