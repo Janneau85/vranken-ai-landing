@@ -170,27 +170,41 @@ serve(async (req) => {
       }
 
       case 'delete_event': {
-        // Get todo to find event ID
-        const { data: todo, error: todoError } = await supabase
-          .from('todos')
-          .select('notes')
-          .eq('id', todoId)
-          .single();
+        const { eventId: providedEventId } = await req.json();
+        let eventId = providedEventId;
+        
+        // If no eventId provided, try to fetch from todo
+        if (!eventId) {
+          console.log('No eventId provided, fetching from todo:', todoId);
+          const { data: todo, error: todoError } = await supabase
+            .from('todos')
+            .select('notes')
+            .eq('id', todoId)
+            .single();
 
-        if (todoError || !todo) {
-          throw new Error('Todo not found');
+          if (todoError) {
+            console.error('Todo fetch error:', todoError);
+            throw new Error(`Todo not found: ${todoError.message}`);
+          }
+          
+          if (!todo) {
+            throw new Error('Todo not found: no data returned');
+          }
+
+          // Extract event ID from notes
+          const eventIdMatch = todo.notes?.match(/Google Calendar Event ID: (.+)/);
+          if (!eventIdMatch) {
+            console.log('No calendar event linked to todo:', todoId);
+            return new Response(
+              JSON.stringify({ success: true, message: 'No calendar event linked' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          eventId = eventIdMatch[1];
         }
-
-        // Extract event ID from notes
-        const eventIdMatch = todo.notes?.match(/Google Calendar Event ID: (.+)/);
-        if (!eventIdMatch) {
-          return new Response(
-            JSON.stringify({ success: true, message: 'No calendar event linked' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        const eventId = eventIdMatch[1];
+        
+        console.log('Deleting calendar event:', eventId, 'from calendar:', config.calendar_id);
 
         // Delete from Google Calendar
         const deleteResponse = await fetch(
@@ -205,9 +219,12 @@ serve(async (req) => {
 
         if (!deleteResponse.ok && deleteResponse.status !== 404) {
           const error = await deleteResponse.text();
+          console.error('Google Calendar delete error:', error);
           throw new Error(`Failed to delete calendar event: ${error}`);
         }
 
+        console.log('Successfully deleted event from calendar');
+        
         return new Response(
           JSON.stringify({ 
             success: true,

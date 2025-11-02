@@ -27,6 +27,7 @@ interface Todo {
   due_date: string | null;
   assigned_to: string | null;
   created_at: string;
+  notes: string | null;
 }
 
 interface Profile {
@@ -213,6 +214,15 @@ const TodoList = () => {
       const newStatus = todo.status === "open" ? "completed" : "open";
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Extract event ID BEFORE updating (if deleting)
+      let eventId: string | null = null;
+      if (newStatus === "completed" && hasTodoCalendar) {
+        const eventIdMatch = todo.notes?.match(/Google Calendar Event ID: (.+)/);
+        if (eventIdMatch) {
+          eventId = eventIdMatch[1];
+        }
+      }
+      
       const { error } = await supabase
         .from("todos")
         .update({
@@ -224,17 +234,20 @@ const TodoList = () => {
 
       if (error) throw error;
 
-      // Delete from calendar when completed
-      if (newStatus === "completed" && hasTodoCalendar) {
+      // Delete from calendar when completed - pass eventId directly
+      if (newStatus === "completed" && hasTodoCalendar && eventId) {
         try {
           await supabase.functions.invoke('sync-todos-to-calendar', {
             body: { 
               action: 'delete_event',
-              todoId: todo.id
+              todoId: todo.id,
+              eventId: eventId
             }
           });
+          toast.success("Taak voltooid en verwijderd van kalender");
         } catch (syncError) {
           console.error('Calendar delete error:', syncError);
+          toast.warning("Taak voltooid, maar niet verwijderd van kalender");
         }
       }
     } catch (error) {
