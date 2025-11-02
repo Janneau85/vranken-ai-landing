@@ -1,5 +1,13 @@
 import { useUserTheme } from '@/hooks/useUserTheme';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Palette } from 'lucide-react';
 
 const themeColors = [
@@ -16,31 +24,29 @@ export const ThemeSelector = () => {
   const { accentColor, updateTheme } = useUserTheme();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon">
           <Palette className="h-5 w-5" />
-          Persoonlijk Thema
-        </CardTitle>
-        <CardDescription>
-          Kies je eigen accent kleur voor borders en highlights
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-7 gap-3">
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>Thema Kleur</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <div className="grid grid-cols-4 gap-2 p-2">
           {themeColors.map((theme) => (
             <button
               key={theme.color}
               onClick={() => updateTheme(theme.color)}
-              className="group relative"
+              className="group relative flex items-center justify-center"
               title={theme.name}
             >
               <div
-                className="w-12 h-12 rounded-full transition-all hover:scale-110"
+                className="w-10 h-10 rounded-full transition-all hover:scale-110"
                 style={{
                   backgroundColor: theme.color,
                   boxShadow: accentColor === theme.color 
-                    ? `0 0 0 4px hsl(var(--background)), 0 0 0 6px ${theme.color}`
+                    ? `0 0 0 2px hsl(var(--background)), 0 0 0 4px ${theme.color}`
                     : 'none',
                 }}
               />
@@ -48,7 +54,7 @@ export const ThemeSelector = () => {
             </button>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
