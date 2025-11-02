@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
 import {
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -19,7 +21,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Pencil } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+
+const nameSchema = z.string()
+  .trim()
+  .min(1, { message: "Naam mag niet leeg zijn" })
+  .max(100, { message: "Naam mag maximaal 100 tekens zijn" });
 
 type UserRole = Tables<"user_roles">;
 
@@ -36,6 +53,9 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedRole, setSelectedRole] = useState<string>("");
+  const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
+  const [editName, setEditName] = useState<string>("");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -97,8 +117,8 @@ const AdminUsers = () => {
   const handleAddRole = async () => {
     if (!selectedUserId || !selectedRole) {
       toast({
-        title: "Error",
-        description: "Please select both user and role",
+        title: "Fout",
+        description: "Selecteer zowel gebruiker als rol",
         variant: "destructive",
       });
       return;
@@ -115,8 +135,8 @@ const AdminUsers = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Role added successfully",
+        title: "Gelukt",
+        description: "Rol succesvol toegevoegd",
       });
 
       setSelectedUserId("");
@@ -125,8 +145,8 @@ const AdminUsers = () => {
     } catch (error: any) {
       console.error("Error adding role:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to add role",
+        title: "Fout",
+        description: error.message || "Kan rol niet toevoegen",
         variant: "destructive",
       });
     }
@@ -143,38 +163,82 @@ const AdminUsers = () => {
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Role removed successfully",
+        title: "Gelukt",
+        description: "Rol succesvol verwijderd",
       });
 
       fetchUsers();
     } catch (error: any) {
       console.error("Error removing role:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to remove role",
+        title: "Fout",
+        description: error.message || "Kan rol niet verwijderen",
         variant: "destructive",
       });
     }
   };
 
+  const openEditDialog = (user: UserWithRoles) => {
+    setEditingUser(user);
+    setEditName(user.name || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateName = async () => {
+    if (!editingUser) return;
+
+    try {
+      const validatedName = nameSchema.parse(editName);
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ name: validatedName })
+        .eq("id", editingUser.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Gelukt",
+        description: "Naam succesvol bijgewerkt",
+      });
+
+      setIsEditDialogOpen(false);
+      fetchUsers();
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validatiefout",
+          description: error.issues[0].message,
+          variant: "destructive",
+        });
+      } else {
+        console.error("Error updating name:", error);
+        toast({
+          title: "Fout",
+          description: error.message || "Kan naam niet bijwerken",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   if (loading) {
-    return <div className="text-muted-foreground">Loading users...</div>;
+    return <div className="text-muted-foreground">Gebruikers laden...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-foreground">User Management</h2>
+        <h2 className="text-3xl font-bold text-foreground">Gebruikersbeheer</h2>
         <p className="text-muted-foreground mt-2">
-          Manage user roles and permissions
+          Beheer gebruikersrollen en permissies
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Add Role to User</CardTitle>
-          <CardDescription>Assign admin or user roles</CardDescription>
+          <CardTitle>Rol Toewijzen aan Gebruiker</CardTitle>
+          <CardDescription>Wijs admin of user rollen toe</CardDescription>
         </CardHeader>
         <CardContent className="flex gap-4">
           <input
@@ -186,21 +250,21 @@ const AdminUsers = () => {
           />
           <Select value={selectedRole} onValueChange={setSelectedRole}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select role" />
+              <SelectValue placeholder="Selecteer rol" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="user">User</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleAddRole}>Add Role</Button>
+          <Button onClick={handleAddRole}>Rol Toevoegen</Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Users & Roles</CardTitle>
-          <CardDescription>Current user role assignments</CardDescription>
+          <CardTitle>Gebruikers & Rollen</CardTitle>
+          <CardDescription>Huidige gebruikersrol toewijzingen</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -222,8 +286,17 @@ const AdminUsers = () => {
               ) : (
                 users.map((user) => (
                   <TableRow key={user.user_id}>
-                    <TableCell className="font-medium">
-                      {user.name || "Geen naam"}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{user.name || "Geen naam"}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(user)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {user.user_id.slice(0, 8)}...
@@ -261,6 +334,37 @@ const AdminUsers = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gebruikersnaam Bewerken</DialogTitle>
+            <DialogDescription>
+              Wijzig de naam van de gebruiker
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Naam</Label>
+              <Input
+                id="name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Voer naam in"
+                maxLength={100}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Annuleren
+            </Button>
+            <Button onClick={handleUpdateName}>
+              Opslaan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
