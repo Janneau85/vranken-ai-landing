@@ -90,7 +90,7 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
-        method: 'GET',
+        body: { action: 'list' },
       });
 
       if (error) throw error;
@@ -121,6 +121,7 @@ const AdminUsers = () => {
 
       const { data, error } = await supabase.functions.invoke('admin-users', {
         body: {
+          action: 'create',
           email: newUserEmail,
           password: newUserPassword,
           name: newUserName,
@@ -225,26 +226,16 @@ const AdminUsers = () => {
       emailSchema.parse(editEmail);
       if (editName) nameSchema.parse(editName);
 
-      // Update via edge function
-      const { data, error } = await supabase.functions.invoke(`admin-users/${editingUser.id}`, {
-        method: 'PATCH',
+      const { data, error } = await supabase.functions.invoke('admin-users', {
         body: {
+          action: 'update',
+          userId: editingUser.id,
           email: editEmail,
           name: editName,
         },
       });
 
       if (error) throw error;
-
-      // Also update profile table directly
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: editingUser.id,
-          name: editName,
-        });
-
-      if (profileError) throw profileError;
 
       toast({
         title: "Gelukt",
@@ -293,8 +284,11 @@ const AdminUsers = () => {
     if (!userToDelete) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke(`admin-users/${userToDelete.id}`, {
-        method: 'DELETE',
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'delete',
+          userId: userToDelete.id,
+        },
       });
 
       if (error) throw error;
