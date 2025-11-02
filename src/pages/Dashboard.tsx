@@ -11,6 +11,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -25,10 +26,17 @@ const Dashboard = () => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (!session) {
         navigate("/auth");
+      } else {
+        // Check if user is admin
+        const { data } = await supabase.rpc('has_role', {
+          _user_id: session.user.id,
+          _role: 'admin'
+        });
+        setIsAdmin(data || false);
       }
       setLoading(false);
     });
@@ -67,13 +75,23 @@ const Dashboard = () => {
           >
             Vranken.AI
           </h1>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-border"
-          >
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Button
+                onClick={() => navigate("/admin")}
+                variant="default"
+              >
+                Admin Panel
+              </Button>
+            )}
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="border-border"
+            >
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
