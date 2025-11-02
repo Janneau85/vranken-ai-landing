@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 import GoogleCalendar from "@/components/GoogleCalendar";
+import { ThemeSelector } from "@/components/ThemeSelector";
+import { useUserTheme } from "@/hooks/useUserTheme";
 import { ShoppingCart, UtensilsCrossed, CheckSquare } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { accentColor } = useUserTheme();
   const [user, setUser] = useState<User | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -120,8 +123,11 @@ const Dashboard = () => {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-4xl">
             <Link to="/shopping">
-              <div className="p-6 bg-card border border-border rounded-lg hover:border-primary transition-colors cursor-pointer h-full">
-                <ShoppingCart className="w-8 h-8 mb-3 text-primary" />
+              <div 
+                className="p-6 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg"
+                style={{ borderColor: accentColor }}
+              >
+                <ShoppingCart className="w-8 h-8 mb-3" style={{ color: accentColor }} />
                 <h3 className="text-xl font-semibold mb-2 text-foreground">Boodschappenlijst</h3>
                 <p className="text-muted-foreground">
                   Gezamenlijke boodschappenlijst met real-time sync
@@ -130,8 +136,11 @@ const Dashboard = () => {
             </Link>
 
             <Link to="/meals">
-              <div className="p-6 bg-card border border-border rounded-lg hover:border-primary transition-colors cursor-pointer h-full">
-                <UtensilsCrossed className="w-8 h-8 mb-3 text-primary" />
+              <div 
+                className="p-6 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg"
+                style={{ borderColor: accentColor }}
+              >
+                <UtensilsCrossed className="w-8 h-8 mb-3" style={{ color: accentColor }} />
                 <h3 className="text-xl font-semibold mb-2 text-foreground">Maaltijdplanner</h3>
                 <p className="text-muted-foreground">
                   Plan je maaltijden en beheer recepten
@@ -140,14 +149,21 @@ const Dashboard = () => {
             </Link>
 
             <Link to="/todos">
-              <div className="p-6 bg-card border border-border rounded-lg hover:border-primary transition-colors cursor-pointer h-full">
-                <CheckSquare className="w-8 h-8 mb-3 text-primary" />
+              <div 
+                className="p-6 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg"
+                style={{ borderColor: accentColor }}
+              >
+                <CheckSquare className="w-8 h-8 mb-3" style={{ color: accentColor }} />
                 <h3 className="text-xl font-semibold mb-2 text-foreground">Todo Lijst</h3>
                 <p className="text-muted-foreground">
                   Huishoudelijke taken en klusjes
                 </p>
               </div>
             </Link>
+          </div>
+          
+          <div className="mt-8 max-w-4xl">
+            <ThemeSelector />
           </div>
         </div>
 

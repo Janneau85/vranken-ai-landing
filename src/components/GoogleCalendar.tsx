@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, ExternalLink } from "lucide-react";
+import { Calendar, Clock, ExternalLink, Unplug } from "lucide-react";
 
 interface CalendarEvent {
   id: string;
@@ -357,47 +358,58 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
   const dayGroups = groupEventsByDay();
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Familie Agenda
-            </CardTitle>
-            <CardDescription>
-              Komende 5 dagen
-            </CardDescription>
-          </div>
-          {isAdmin && (
-            <div className="flex items-center gap-2">
-              {!isConnected ? (
-                <Button onClick={connectToGoogle} disabled={loading} size="sm">
-                  {loading ? "Verbinden..." : "Koppel Calendar"}
-                </Button>
-              ) : (
-                <>
-                  <Button 
-                    onClick={() => {
-                      const accessToken = localStorage.getItem('google_access_token');
-                      const refreshToken = localStorage.getItem('google_refresh_token');
-                      if (accessToken) fetchEvents(accessToken, refreshToken);
-                    }} 
-                    disabled={loading}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {loading ? "Laden..." : "Ververs"}
-                  </Button>
-                  <Button onClick={disconnect} variant="ghost" size="sm">
-                    Ontkoppel
-                  </Button>
-                </>
-              )}
+    <TooltipProvider>
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Familie Agenda
+              </CardTitle>
+              <CardDescription>
+                Komende 5 dagen
+              </CardDescription>
             </div>
-          )}
-        </div>
-      </CardHeader>
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                {!isConnected ? (
+                  <Button onClick={connectToGoogle} disabled={loading} size="sm">
+                    {loading ? "Verbinden..." : "Koppel Calendar"}
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      onClick={() => {
+                        const accessToken = localStorage.getItem('google_access_token');
+                        const refreshToken = localStorage.getItem('google_refresh_token');
+                        if (accessToken) fetchEvents(accessToken, refreshToken);
+                      }} 
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {loading ? "Laden..." : "Ververs"}
+                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={disconnect}
+                          className="opacity-50 hover:opacity-100 hover:text-destructive transition-all p-1 rounded"
+                        >
+                          <Unplug className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Ontkoppelen</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </CardHeader>
       <CardContent>
         {loading ? (
           <p className="text-muted-foreground text-center py-8">Evenementen laden...</p>
@@ -462,6 +474,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
         )}
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 };
 
