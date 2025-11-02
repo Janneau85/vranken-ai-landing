@@ -104,19 +104,57 @@ const GoogleCalendar = () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase.functions.invoke('google-calendar', {
-        body: {
-          action: 'get_events',
-          accessToken,
-          refreshToken,
-        },
+      // First, get user's assigned calendars
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: assignments, error: assignError } = await supabase
+        .from('calendar_assignments')
+        .select('calendar_id')
+        .eq('user_id', user.id);
+
+      if (assignError) throw assignError;
+
+      if (!assignments || assignments.length === 0) {
+        setEvents([]);
+        toast({
+          title: "Geen calendars",
+          description: "Er zijn geen calendars aan jou toegewezen. Neem contact op met een admin.",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Fetch events for each assigned calendar
+      const allEvents: CalendarEvent[] = [];
+      for (const assignment of assignments) {
+        const { data, error } = await supabase.functions.invoke('google-calendar', {
+          body: {
+            action: 'get_events',
+            accessToken,
+            refreshToken,
+            calendarId: assignment.calendar_id,
+          },
+        });
+
+        if (error) {
+          console.error(`Error fetching calendar ${assignment.calendar_id}:`, error);
+          continue;
+        }
+        
+        if (data?.events) {
+          allEvents.push(...data.events);
+        }
+      }
+
+      // Sort events by start time
+      allEvents.sort((a, b) => {
+        const aTime = a.start.dateTime || a.start.date || '';
+        const bTime = b.start.dateTime || b.start.date || '';
+        return new Date(aTime).getTime() - new Date(bTime).getTime();
       });
 
-      if (error) throw error;
-
-      if (data?.events) {
-        setEvents(data.events);
-      }
+      setEvents(allEvents);
     } catch (error) {
       console.error('Error fetching events:', error);
       

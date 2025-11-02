@@ -12,7 +12,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, accessToken, refreshToken, code, redirectUri } = body;
+    const { action, accessToken, refreshToken, code, redirectUri, calendarId } = body;
     console.log('Google Calendar function called with action:', action);
 
     const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
@@ -88,14 +88,15 @@ serve(async (req) => {
 
     // Handle getting calendar events
     if (action === 'get_events' && accessToken) {
-      console.log('Fetching calendar events');
+      const targetCalendar = calendarId || 'primary';
+      console.log(`Fetching calendar events from: ${targetCalendar}`);
       
       const now = new Date();
       const oneMonthLater = new Date();
       oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
 
       const eventsResponse = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendar)}/events?` +
         `timeMin=${now.toISOString()}&` +
         `timeMax=${oneMonthLater.toISOString()}&` +
         `singleEvents=true&` +
@@ -116,7 +117,7 @@ serve(async (req) => {
       }
 
       const eventsData = await eventsResponse.json();
-      console.log(`Successfully fetched ${eventsData.items?.length || 0} events`);
+      console.log(`Successfully fetched ${eventsData.items?.length || 0} events from ${targetCalendar}`);
 
       return new Response(
         JSON.stringify({ events: eventsData.items || [] }),

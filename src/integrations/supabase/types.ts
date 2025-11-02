@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_assignments: {
+        Row: {
+          calendar_id: string
+          calendar_name: string | null
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          calendar_id: string
+          calendar_name?: string | null
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          calendar_id?: string
+          calendar_name?: string | null
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
