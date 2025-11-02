@@ -39,8 +39,11 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     /* Embossed effect shadows */
-    --emboss-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), -2px -2px 4px rgba(255, 255, 255, 0.05);
-    --emboss-inset: inset 2px 2px 4px rgba(0, 0, 0, 0.9), inset -2px -2px 4px rgba(255, 255, 255, 0.03);
+    --emboss-shadow: 4px 4px 12px rgba(0, 0, 0, 0.9), -4px -4px 12px rgba(255, 255, 255, 0.1);
+    --emboss-inset: inset 6px 6px 16px rgba(0, 0, 0, 0.95), inset -6px -6px 16px rgba(255, 255, 255, 0.08);
+    
+    /* Gradient backgrounds */
+    --gradient-dark: linear-gradient(135deg, hsl(0 0% 5%), hsl(0 0% 10%), hsl(0 0% 7%));
   }
 }
 

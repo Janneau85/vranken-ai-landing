@@ -4,12 +4,19 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="relative flex items-center justify-center py-32 overflow-hidden">
-        <h1 
-          className="text-[12rem] font-bold select-none"
+        <div 
+          className="absolute inset-0 opacity-50"
           style={{
-            color: 'hsl(var(--background))',
+            background: 'radial-gradient(ellipse at center, hsl(0 0% 12%) 0%, hsl(0 0% 7%) 70%)'
+          }}
+        />
+        <h1 
+          className="relative text-[12rem] font-bold select-none"
+          style={{
+            color: 'hsl(0 0% 10%)',
             textShadow: 'var(--emboss-inset)',
             letterSpacing: '-0.02em',
+            WebkitTextStroke: '1px hsl(0 0% 8%)',
           }}
         >
           Vranken.AI
