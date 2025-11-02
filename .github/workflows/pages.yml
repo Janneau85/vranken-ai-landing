@@ -26,7 +26,7 @@ jobs:
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist   # ← verander naar ./out als je Next.js 'export' gebruikt
+          path: ./out   # ← verander naar ./out als je Next.js 'export' gebruikt
   deploy:
     needs: build
     runs-on: ubuntu-latest
