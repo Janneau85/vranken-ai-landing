@@ -76,7 +76,7 @@ const Auth = () => {
               letterSpacing: '-0.02em',
             }}
           >
-            Vranken.AI
+            vranken.AI
           </h1>
           <p className="text-muted-foreground">Family Dashboard Login</p>
         </div>

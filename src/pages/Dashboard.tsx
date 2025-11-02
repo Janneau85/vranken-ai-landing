@@ -73,7 +73,7 @@ const Dashboard = () => {
               letterSpacing: '-0.02em',
             }}
           >
-            Vranken.AI
+            vranken.AI
           </h1>
           <div className="flex items-center gap-3">
             {isAdmin && (

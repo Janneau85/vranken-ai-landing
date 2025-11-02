@@ -19,7 +19,7 @@ const Index = () => {
             WebkitTextStroke: '1px hsl(0 0% 8%)',
           }}
         >
-          Vranken.AI
+          vranken.AI
         </h1>
       </header>
 
