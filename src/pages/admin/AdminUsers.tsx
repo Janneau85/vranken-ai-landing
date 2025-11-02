@@ -26,6 +26,7 @@ type UserRole = Tables<"user_roles">;
 interface UserWithRoles {
   user_id: string;
   email: string;
+  name: string | null;
   roles: string[];
 }
 
@@ -52,19 +53,36 @@ const AdminUsers = () => {
         if (!usersMap.has(role.user_id)) {
           usersMap.set(role.user_id, {
             user_id: role.user_id,
-            email: "", // Will be filled later
+            email: "",
+            name: null,
             roles: []
           });
         }
         usersMap.get(role.user_id)!.roles.push(role.role);
       });
 
+      // Fetch profile data for all users
+      const userIds = Array.from(usersMap.keys());
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", userIds);
+
+        profilesData?.forEach((profile) => {
+          const user = usersMap.get(profile.id);
+          if (user) {
+            user.name = profile.name;
+          }
+        });
+      }
+
       setUsers(Array.from(usersMap.values()));
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
-        title: "Error",
-        description: "Failed to load users",
+        title: "Fout",
+        description: "Kan gebruikers niet laden",
         variant: "destructive",
       });
     } finally {
@@ -188,6 +206,7 @@ const AdminUsers = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Naam</TableHead>
                 <TableHead>User ID</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>Actions</TableHead>
@@ -196,13 +215,16 @@ const AdminUsers = () => {
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
-                    No users found
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    Geen gebruikers gevonden
                   </TableCell>
                 </TableRow>
               ) : (
                 users.map((user) => (
                   <TableRow key={user.user_id}>
+                    <TableCell className="font-medium">
+                      {user.name || "Geen naam"}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">
                       {user.user_id.slice(0, 8)}...
                     </TableCell>
@@ -227,7 +249,7 @@ const AdminUsers = () => {
                             size="sm"
                             onClick={() => handleRemoveRole(user.user_id, role)}
                           >
-                            Remove {role}
+                            Verwijder {role}
                           </Button>
                         ))}
                       </div>
