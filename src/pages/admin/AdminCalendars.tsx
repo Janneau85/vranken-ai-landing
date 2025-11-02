@@ -119,10 +119,13 @@ export default function AdminCalendars() {
 
     setIsLoadingCalendars(true);
     try {
+      // Always fetch calendars from the master janneauv@gmail.com account
+      const MASTER_ACCOUNT_ID = 'b64ce1b2-e684-4568-87ac-0e5bc867366d'; // janneauv@gmail.com
+      
       const { data, error } = await supabase.functions.invoke('google-calendar', {
         body: { 
           action: 'list_calendars_for_user',
-          userId: selectedUserId
+          userId: MASTER_ACCOUNT_ID
         }
       });
 
@@ -132,15 +135,11 @@ export default function AdminCalendars() {
         setUserCalendars(data.items);
       } else {
         setUserCalendars([]);
-        sonnerToast.error("Gebruiker heeft Google Calendar nog niet gekoppeld");
+        sonnerToast.error("Kan kalenders niet ophalen uit het master account");
       }
     } catch (error: any) {
-      console.error("Error fetching user calendars:", error);
-      if (error.message?.includes('not connected')) {
-        sonnerToast.error("Deze gebruiker moet eerst Google Calendar koppelen");
-      } else {
-        sonnerToast.error("Fout bij ophalen van kalenders");
-      }
+      console.error("Error fetching calendars from master account:", error);
+      sonnerToast.error("Fout bij ophalen van kalenders uit master account");
       setUserCalendars([]);
     } finally {
       setIsLoadingCalendars(false);
@@ -224,8 +223,8 @@ export default function AdminCalendars() {
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Let op:</strong> Gebruikers moeten eerst hun Google Calendar koppelen voordat je kalenders kunt toewijzen.
-          Na het selecteren van een gebruiker worden hun beschikbare kalenders automatisch opgehaald.
+          <strong>Let op:</strong> Alle kalenders worden opgehaald uit het janneauv@gmail.com account.
+          Selecteer een gebruiker en wijs een kalender toe aan deze gebruiker.
         </AlertDescription>
       </Alert>
 
@@ -290,7 +289,7 @@ export default function AdminCalendars() {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Deze gebruiker heeft nog geen Google Calendar gekoppeld.
+                    Kan kalenders niet ophalen uit het master account (janneauv@gmail.com).
                   </AlertDescription>
                 </Alert>
               )}
