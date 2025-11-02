@@ -18,11 +18,15 @@ interface CalendarEvent {
   backgroundColor?: string;
 }
 
+interface GoogleCalendarProps {
+  isAdmin: boolean;
+}
+
 const GOOGLE_CLIENT_ID = "180123280397-g3ulpf9rv6cetrlrh8veg3pmdkba9u3m.apps.googleusercontent.com";
 const REDIRECT_URI = window.location.origin + "/dashboard";
 const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
 
-const GoogleCalendar = () => {
+const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -301,7 +305,7 @@ const GoogleCalendar = () => {
     });
   };
 
-  const formatEventDate = (event: CalendarEvent) => {
+  const formatEventTime = (event: CalendarEvent) => {
     const startDate = event.start.dateTime || event.start.date;
     if (!startDate) return '';
     
@@ -309,115 +313,147 @@ const GoogleCalendar = () => {
     const isAllDay = !event.start.dateTime;
     
     if (isAllDay) {
-      return date.toLocaleDateString('nl-NL', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric' 
-      });
+      return 'Hele dag';
     }
     
-    return date.toLocaleDateString('nl-NL', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric',
+    return date.toLocaleTimeString('nl-NL', { 
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
+  const groupEventsByDay = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const next5Days = Array.from({ length: 5 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      return date;
+    });
+
+    return next5Days.map(date => {
+      const dayEvents = events.filter(event => {
+        const eventDate = new Date(event.start.dateTime || event.start.date || '');
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate.getTime() === date.getTime();
+      });
+
+      return {
+        date,
+        events: dayEvents.sort((a, b) => {
+          const aTime = a.start.dateTime || a.start.date || '';
+          const bTime = b.start.dateTime || b.start.date || '';
+          return new Date(aTime).getTime() - new Date(bTime).getTime();
+        })
+      };
+    });
+  };
+
+  const dayGroups = groupEventsByDay();
+
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          Google Calendar
-        </CardTitle>
-        <CardDescription>
-          {isConnected 
-            ? "Je komende evenementen" 
-            : "Koppel je Google Calendar om evenementen te zien"}
-        </CardDescription>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Familie Agenda
+            </CardTitle>
+            <CardDescription>
+              Komende 5 dagen
+            </CardDescription>
+          </div>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              {!isConnected ? (
+                <Button onClick={connectToGoogle} disabled={loading} size="sm">
+                  {loading ? "Verbinden..." : "Koppel Calendar"}
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    onClick={() => {
+                      const accessToken = localStorage.getItem('google_access_token');
+                      const refreshToken = localStorage.getItem('google_refresh_token');
+                      if (accessToken) fetchEvents(accessToken, refreshToken);
+                    }} 
+                    disabled={loading}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {loading ? "Laden..." : "Ververs"}
+                  </Button>
+                  <Button onClick={disconnect} variant="ghost" size="sm">
+                    Ontkoppel
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        {!isConnected ? (
-          <Button onClick={connectToGoogle} disabled={loading}>
-            {loading ? "Verbinden..." : "Koppel Google Calendar"}
-          </Button>
+        {loading ? (
+          <p className="text-muted-foreground text-center py-8">Evenementen laden...</p>
+        ) : events.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
         ) : (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Button 
-                onClick={() => {
-                  const accessToken = localStorage.getItem('google_access_token');
-                  const refreshToken = localStorage.getItem('google_refresh_token');
-                  if (accessToken) fetchEvents(accessToken, refreshToken);
-                }} 
-                disabled={loading}
-                variant="outline"
-              >
-                {loading ? "Laden..." : "Ververs"}
-              </Button>
-              <Button onClick={disconnect} variant="ghost" size="sm">
-                Ontkoppel
-              </Button>
-            </div>
-
-            {loading ? (
-              <p className="text-muted-foreground text-center py-8">Evenementen laden...</p>
-            ) : events.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
-            ) : (
-              <div className="space-y-3">
-                {events.slice(0, 10).map((event) => (
-                  <div 
-                    key={event.id}
-                    className="p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                    style={{
-                      borderLeftWidth: '4px',
-                      borderLeftColor: event.backgroundColor || 'hsl(var(--primary))',
-                    }}
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold truncate">{event.summary}</h4>
-                          {event.calendarName && (
-                            <span 
-                              className="text-xs px-2 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: event.backgroundColor ? `${event.backgroundColor}20` : 'hsl(var(--accent))',
-                                color: event.backgroundColor || 'hsl(var(--foreground))',
-                              }}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {dayGroups.map(({ date, events: dayEvents }) => (
+              <div key={date.toISOString()} className="border rounded-lg p-4 bg-card">
+                <div className="mb-3 pb-2 border-b">
+                  <h3 className="font-semibold text-foreground">
+                    {date.toLocaleDateString('nl-NL', { weekday: 'short' })}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {dayEvents.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Geen afspraken</p>
+                  ) : (
+                    dayEvents.map((event) => (
+                      <div 
+                        key={event.id}
+                        className="p-2 border rounded hover:bg-accent/50 transition-colors"
+                        style={{
+                          borderLeftWidth: '3px',
+                          borderLeftColor: event.backgroundColor || 'hsl(var(--primary))',
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm truncate">{event.summary}</h4>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{formatEventTime(event)}</span>
+                            </div>
+                            {event.location && (
+                              <p className="text-xs text-muted-foreground mt-1 truncate">
+                                📍 {event.location}
+                              </p>
+                            )}
+                          </div>
+                          {event.htmlLink && (
+                            <a 
+                              href={event.htmlLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-primary hover:text-primary/80 flex-shrink-0"
                             >
-                              {event.calendarName}
-                            </span>
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatEventDate(event)}</span>
-                        </div>
-                        {event.location && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
-                            📍 {event.location}
-                          </p>
-                        )}
                       </div>
-                      {event.htmlLink && (
-                        <a 
-                          href={event.htmlLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:text-primary/80"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                    ))
+                  )}
+                </div>
               </div>
-            )}
+            ))}
           </div>
         )}
       </CardContent>
