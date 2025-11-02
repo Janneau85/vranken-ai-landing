@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import {
   Table,
   TableBody,
@@ -13,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type CalendarAssignment = {
   id: string;
@@ -23,59 +22,32 @@ type CalendarAssignment = {
   created_at: string;
 };
 
-type UserWithAssignments = {
-  user_id: string;
-  email: string;
-  calendars: CalendarAssignment[];
-};
-
 export default function AdminCalendars() {
-  const [users, setUsers] = useState<UserWithAssignments[]>([]);
+  const [assignments, setAssignments] = useState<CalendarAssignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [userId, setUserId] = useState("");
   const [calendarId, setCalendarId] = useState("");
   const [calendarName, setCalendarName] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchCalendarAssignments();
+    fetchAssignments();
   }, []);
 
-  const fetchCalendarAssignments = async () => {
+  const fetchAssignments = async () => {
     try {
-      setLoading(true);
-
-      // Fetch all calendar assignments
-      const { data: assignments, error: assignError } = await supabase
+      const { data, error } = await supabase
         .from("calendar_assignments")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (assignError) throw assignError;
-
-      // Get unique user IDs
-      const userIds = [...new Set(assignments?.map(a => a.user_id) || [])];
-
-      // Fetch user emails using RPC or auth admin
-      const usersMap = new Map<string, string>();
-      for (const userId of userIds) {
-        // Since we can't access auth.users directly, we'll just use the user_id
-        usersMap.set(userId, userId);
-      }
-
-      // Group assignments by user
-      const userAssignments: UserWithAssignments[] = userIds.map(userId => ({
-        user_id: userId,
-        email: usersMap.get(userId) || userId,
-        calendars: assignments?.filter(a => a.user_id === userId) || [],
-      }));
-
-      setUsers(userAssignments);
-    } catch (error: any) {
+      if (error) throw error;
+      setAssignments(data || []);
+    } catch (error) {
       console.error("Error fetching calendar assignments:", error);
       toast({
-        title: "Error",
-        description: "Failed to fetch calendar assignments",
+        title: "Fout",
+        description: "Kan kalender toewijzingen niet laden",
         variant: "destructive",
       });
     } finally {
@@ -84,170 +56,157 @@ export default function AdminCalendars() {
   };
 
   const handleAddAssignment = async () => {
-    if (!selectedUserId || !calendarId) {
+    if (!userId.trim() || !calendarId.trim()) {
       toast({
-        title: "Error",
-        description: "User ID en Calendar ID zijn verplicht",
+        title: "Fout",
+        description: "Vul zowel Gebruikers ID als Kalender ID in",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { error } = await supabase.from("calendar_assignments").insert({
-        user_id: selectedUserId,
-        calendar_id: calendarId,
-        calendar_name: calendarName || null,
-      });
+      const { error } = await supabase
+        .from("calendar_assignments")
+        .insert({
+          user_id: userId.trim(),
+          calendar_id: calendarId.trim(),
+          calendar_name: calendarName.trim() || null,
+        });
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Calendar toegewezen aan gebruiker",
+        title: "Gelukt",
+        description: "Kalender toewijzing succesvol toegevoegd",
       });
 
-      setSelectedUserId("");
+      setUserId("");
       setCalendarId("");
       setCalendarName("");
-      fetchCalendarAssignments();
+      fetchAssignments();
     } catch (error: any) {
       console.error("Error adding calendar assignment:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to add calendar assignment",
+        title: "Fout",
+        description: error.message || "Kan kalender toewijzing niet toevoegen",
         variant: "destructive",
       });
     }
   };
 
-  const handleRemoveAssignment = async (assignmentId: string) => {
+  const handleRemoveAssignment = async (id: string) => {
     try {
       const { error } = await supabase
         .from("calendar_assignments")
         .delete()
-        .eq("id", assignmentId);
+        .eq("id", id);
 
       if (error) throw error;
 
       toast({
-        title: "Success",
-        description: "Calendar toewijzing verwijderd",
+        title: "Gelukt",
+        description: "Kalender toewijzing succesvol verwijderd",
       });
 
-      fetchCalendarAssignments();
+      fetchAssignments();
     } catch (error: any) {
       console.error("Error removing calendar assignment:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to remove calendar assignment",
+        title: "Fout",
+        description: error.message || "Kan kalender toewijzing niet verwijderen",
         variant: "destructive",
       });
     }
   };
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-8">Laden...</div>;
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Calendar Toewijzingen</h1>
-        <p className="text-muted-foreground">
-          Wijs Google Calendars toe aan gebruikers
-        </p>
-      </div>
+    <div className="p-8 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-8">Kalender Beheer</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Nieuwe toewijzing</CardTitle>
-          <CardDescription>
-            Voeg een calendar toe aan een gebruiker
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="userId">User ID</Label>
+      <div className="bg-card p-6 rounded-lg shadow mb-8">
+        <h2 className="text-xl font-semibold mb-4">Wijs Kalender Toe aan Gebruiker</h2>
+        <div className="grid gap-4">
+          <div>
+            <Label htmlFor="userId">Gebruikers ID</Label>
             <Input
               id="userId"
-              placeholder="00000000-0000-0000-0000-000000000000"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              placeholder="Voer gebruiker UUID in"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Tip: Ga naar Users & Roles om gebruikers IDs te vinden
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="calendarId">Calendar ID</Label>
+          <div>
+            <Label htmlFor="calendarId">Google Kalender ID</Label>
             <Input
               id="calendarId"
-              placeholder="primary of specifieke calendar ID"
               value={calendarId}
               onChange={(e) => setCalendarId(e.target.value)}
+              placeholder="bijv. primary of kalender@group.calendar.google.com"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Gebruik 'primary' voor de hoofdkalender of een specifieke kalender ID
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="calendarName">Calendar Naam (optioneel)</Label>
+          <div>
+            <Label htmlFor="calendarName">Kalender Naam (optioneel)</Label>
             <Input
               id="calendarName"
-              placeholder="Bijv. Team Calendar"
               value={calendarName}
               onChange={(e) => setCalendarName(e.target.value)}
+              placeholder="bijv. Werk Kalender"
             />
           </div>
-          <Button onClick={handleAddAssignment}>Toewijzen</Button>
-        </CardContent>
-      </Card>
+          <Button onClick={handleAddAssignment}>Toewijzing Toevoegen</Button>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Huidige toewijzingen</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-card p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Huidige Toewijzingen</h2>
+        {assignments.length === 0 ? (
+          <p className="text-muted-foreground">Nog geen kalender toewijzingen.</p>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>User ID</TableHead>
-                <TableHead>Calendar ID</TableHead>
-                <TableHead>Calendar Naam</TableHead>
-                <TableHead>Toegevoegd</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Gebruikers ID</TableHead>
+                <TableHead>Kalender ID</TableHead>
+                <TableHead>Kalender Naam</TableHead>
+                <TableHead>Acties</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.flatMap((user) =>
-                user.calendars.map((calendar) => (
-                  <TableRow key={calendar.id}>
-                    <TableCell className="font-mono text-sm">
-                      {calendar.user_id.slice(0, 8)}...
-                    </TableCell>
-                    <TableCell>{calendar.calendar_id}</TableCell>
-                    <TableCell>{calendar.calendar_name || "-"}</TableCell>
-                    <TableCell>
-                      {new Date(calendar.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveAssignment(calendar.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-              {users.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    Geen toewijzingen gevonden
+              {assignments.map((assignment) => (
+                <TableRow key={assignment.id}>
+                  <TableCell className="font-mono text-sm">
+                    {assignment.user_id.substring(0, 8)}...
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{assignment.calendar_id}</Badge>
+                  </TableCell>
+                  <TableCell>{assignment.calendar_name || "-"}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleRemoveAssignment(assignment.id)}
+                    >
+                      Verwijder
+                    </Button>
                   </TableCell>
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   );
 }
