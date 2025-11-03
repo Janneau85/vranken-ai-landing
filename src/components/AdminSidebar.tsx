@@ -1,4 +1,4 @@
-import { Users, Home, Database, Calendar } from "lucide-react";
+import { Users, Home, Database, Calendar, MapPin } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -17,6 +17,7 @@ const items = [
   { title: "Dashboard", url: "/admin", icon: Home },
   { title: "Users & Roles", url: "/admin/users", icon: Users },
   { title: "Calendars", url: "/admin/calendars", icon: Calendar },
+  { title: "Location", url: "/admin/location", icon: MapPin },
   { title: "Data", url: "/admin/data", icon: Database },
 ];
 

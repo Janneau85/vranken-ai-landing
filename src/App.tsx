@@ -12,6 +12,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminCalendars from "./pages/admin/AdminCalendars";
+import AdminLocation from "./pages/admin/AdminLocation";
 import AdminData from "./pages/admin/AdminData";
 import ShoppingList from "./pages/ShoppingList";
 import TodoList from "./pages/TodoList";
@@ -37,6 +38,7 @@ const App = () => (
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="calendars" element={<AdminCalendars />} />
+            <Route path="location" element={<AdminLocation />} />
             <Route path="data" element={<AdminData />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

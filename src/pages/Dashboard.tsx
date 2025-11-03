@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import GoogleCalendar from "@/components/GoogleCalendar";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { useUserTheme } from "@/hooks/useUserTheme";
-import { ShoppingCart, CheckSquare, Plus, Bot } from "lucide-react";
+import { ShoppingCart, CheckSquare, Bot } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import WhoIsWhere from "@/components/WhoIsWhere";
 
@@ -150,97 +150,67 @@ const Dashboard = () => {
             Je persoonlijke Family Dashboard
           </p>
 
-          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 max-w-5xl">
-            <Link to="/shopping" className="group">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-5xl">
+            <Link to="/shopping">
               <div 
-                className="relative p-8 bg-card border rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
+                className="p-6 bg-card border rounded-lg transition-all cursor-pointer hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
+                role="button"
               >
-                <button 
-                  className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/shopping');
-                  }}
-                >
-                  <Plus className="w-5 h-5" style={{ color: accentColor }} />
-                </button>
-                <ShoppingCart className="w-12 h-12 mb-4" style={{ color: accentColor }} />
-                <h3 className="text-2xl font-semibold mb-2 text-foreground">Boodschappenlijst</h3>
-                <p className="text-muted-foreground mb-3">
-                  Gezamenlijke boodschappenlijst met real-time sync
-                </p>
+                <div className="flex items-center gap-3 mb-2">
+                  <ShoppingCart className="w-8 h-8" style={{ color: accentColor }} />
+                  <h3 className="text-lg font-semibold text-foreground">Boodschappen</h3>
+                </div>
                 {shoppingCount > 0 && (
-                  <div 
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                    style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
-                  >
-                    {shoppingCount} {shoppingCount === 1 ? 'item' : 'items'}
+                  <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: `${accentColor}20`, color: accentColor }}>
+                    {shoppingCount} items
                   </div>
                 )}
               </div>
             </Link>
 
-            <Link to="/todos" className="group">
+            <Link to="/todos">
               <div 
-                className="relative p-8 bg-card border rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
+                className="p-6 bg-card border rounded-lg transition-all cursor-pointer hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
+                role="button"
               >
-                <button 
-                  className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/todos');
-                  }}
-                >
-                  <Plus className="w-5 h-5" style={{ color: accentColor }} />
-                </button>
-                <CheckSquare className="w-12 h-12 mb-4" style={{ color: accentColor }} />
-                <h3 className="text-2xl font-semibold mb-2 text-foreground">Todo Lijst</h3>
-                <p className="text-muted-foreground mb-3">
-                  Huishoudelijke taken en klusjes
-                </p>
+                <div className="flex items-center gap-3 mb-2">
+                  <CheckSquare className="w-8 h-8" style={{ color: accentColor }} />
+                  <h3 className="text-lg font-semibold text-foreground">Todo</h3>
+                </div>
                 {todoCount > 0 && (
-                  <div 
-                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                    style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
-                  >
-                    {todoCount} {todoCount === 1 ? 'taak' : 'taken'}
+                  <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: `${accentColor}20`, color: accentColor }}>
+                    {todoCount} taken
                   </div>
                 )}
               </div>
             </Link>
 
-            <Link to="/ai-assistant" className="group">
+            <Link to="/ai-assistant">
               <div 
-                className="relative p-8 bg-card border rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
+                className="p-6 bg-card border rounded-lg transition-all cursor-pointer hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
+                role="button"
               >
-                <button 
-                  className="absolute top-4 right-4 opacity-50 hover:opacity-100 transition-opacity"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate('/ai-assistant');
-                  }}
-                >
-                  <Plus className="w-5 h-5" style={{ color: accentColor }} />
-                </button>
-                <Bot className="w-12 h-12 mb-4" style={{ color: accentColor }} />
-                <h3 className="text-2xl font-semibold mb-2 text-foreground">AI Assistent</h3>
-                <p className="text-muted-foreground mb-3">
-                  Chat met je slimme helper voor tips en hulp
-                </p>
+                <div className="flex items-center gap-3">
+                  <Bot className="w-8 h-8" style={{ color: accentColor }} />
+                  <h3 className="text-lg font-semibold text-foreground">AI Assistent</h3>
+                </div>
               </div>
             </Link>
           </div>
         </div>
 
         {/* Wie is waar sectie */}
-        <div className="max-w-5xl mb-8">
+        <div className="w-full max-w-7xl mx-auto mb-8">
           <WhoIsWhere />
         </div>
 
-        <div className="w-full">
+        {/* Kalender sectie */}
+        <div className="w-full max-w-7xl mx-auto">
           <GoogleCalendar isAdmin={isAdmin} />
         </div>
       </main>
