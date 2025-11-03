@@ -473,9 +473,9 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
         ) : events.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-            {/* Vandaag Sectie - Grotere tekst en neemt meer ruimte */}
-            <div className="md:col-span-5 md:border-r md:pr-6">
+          <div className="space-y-6">
+            {/* Vandaag Sectie - Grotere tekst */}
+            <div className="pb-6 border-b">
               <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <Calendar className="h-6 w-6 text-primary" />
                 Vandaag
@@ -537,7 +537,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
             </div>
 
             {/* Komende Week Sectie */}
-            <div className="md:col-span-7">
+            <div>
               <h3 className="text-xl font-bold mb-4">Komende 7 dagen</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
