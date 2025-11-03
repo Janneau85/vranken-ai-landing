@@ -362,22 +362,41 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
     });
   };
 
-  const groupEventsByDay = () => {
+  const getTodayEvents = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const next10Days = Array.from({ length: 10 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
+    return events.filter(event => {
+      const eventDate = new Date(event.start.dateTime || event.start.date || '');
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate.getTime() === today.getTime();
+    }).sort((a, b) => {
+      const aTime = a.start.dateTime || a.start.date || '';
+      const bTime = b.start.dateTime || b.start.date || '';
+      return new Date(aTime).getTime() - new Date(bTime).getTime();
+    });
+  };
+
+  const getNext7DaysEvents = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const next7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(tomorrow);
+      date.setDate(tomorrow.getDate() + i);
       return date;
     });
 
-    return next10Days.map(date => {
+    return next7Days.map(date => {
       const dayEvents = events.filter(event => {
         const eventDate = new Date(event.start.dateTime || event.start.date || '');
         eventDate.setHours(0, 0, 0, 0);
         return eventDate.getTime() === date.getTime();
       });
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
       return {
         date,
@@ -385,12 +404,14 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
           const aTime = a.start.dateTime || a.start.date || '';
           const bTime = b.start.dateTime || b.start.date || '';
           return new Date(aTime).getTime() - new Date(bTime).getTime();
-        })
+        }),
+        isToday: date.getTime() === today.getTime()
       };
     });
   };
 
-  const dayGroups = groupEventsByDay();
+  const todayEvents = getTodayEvents();
+  const weekEvents = getNext7DaysEvents();
 
   return (
     <TooltipProvider>
@@ -403,7 +424,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
                 Familie Agenda
               </CardTitle>
               <CardDescription>
-                Komende 10 dagen
+                Vandaag en komende week
               </CardDescription>
             </div>
             {isAdmin && (
@@ -451,60 +472,130 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
         ) : events.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 gap-y-4">
-            {dayGroups.map(({ date, events: dayEvents }) => (
-              <div key={date.toISOString()} className="border rounded-lg p-4 bg-card">
-                <div className="mb-3 pb-2 border-b">
-                  <h3 className="font-semibold text-foreground">
-                    {date.toLocaleDateString('nl-NL', { weekday: 'short' })}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
-                  </p>
+          <div className="space-y-6">
+            {/* Vandaag Sectie */}
+            <div className="pb-6 border-b">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Vandaag - {new Date().toLocaleDateString('nl-NL', { 
+                  weekday: 'long', 
+                  day: 'numeric', 
+                  month: 'long' 
+                })}
+              </h3>
+              
+              {todayEvents.length === 0 ? (
+                <div className="text-center py-8 bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground">Geen afspraken vandaag 🎉</p>
                 </div>
-                <div className="space-y-2">
-                  {dayEvents.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">Geen afspraken</p>
-                  ) : (
-                    dayEvents.map((event) => (
-                      <div 
-                        key={event.id}
-                        className="p-2 border rounded hover:bg-accent/50 transition-colors"
-                        style={{
-                          borderLeftWidth: '3px',
-                          borderLeftColor: event.backgroundColor || 'hsl(var(--primary))',
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-1">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm truncate">{event.summary}</h4>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{formatEventTime(event)}</span>
-                            </div>
-                            {event.location && (
-                              <p className="text-xs text-muted-foreground mt-1 truncate">
-                                📍 {event.location}
-                              </p>
-                            )}
-                          </div>
-                          {event.htmlLink && (
-                            <a 
-                              href={event.htmlLink} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-primary hover:text-primary/80 flex-shrink-0"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {todayEvents.map((event) => (
+                    <div 
+                      key={event.id}
+                      className="p-4 border-2 rounded-lg hover:bg-accent/50 transition-colors"
+                      style={{
+                        borderLeftWidth: '4px',
+                        borderLeftColor: event.backgroundColor || 'hsl(var(--primary))',
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h4 className="font-semibold text-base flex-1">{event.summary}</h4>
+                        {event.htmlLink && (
+                          <a 
+                            href={event.htmlLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-primary/80 flex-shrink-0"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
                       </div>
-                    ))
-                  )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>{formatEventTime(event)}</span>
+                      </div>
+                      {event.location && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          📍 {event.location}
+                        </p>
+                      )}
+                      {event.description && (
+                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                          {event.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              )}
+            </div>
+
+            {/* Komende Week Sectie */}
+            <div>
+              <h3 className="text-xl font-bold mb-4">Komende week</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+                {weekEvents.map(({ date, events: dayEvents }) => (
+                  <div 
+                    key={date.toISOString()} 
+                    className="border rounded-lg p-4 bg-card"
+                  >
+                    <div className="mb-3 pb-2 border-b">
+                      <h3 className="font-semibold">
+                        {date.toLocaleDateString('nl-NL', { weekday: 'short' })}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {dayEvents.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">Geen afspraken</p>
+                      ) : (
+                        dayEvents.map((event) => (
+                          <div 
+                            key={event.id}
+                            className="p-2 border rounded hover:bg-accent/50 transition-colors"
+                            style={{
+                              borderLeftWidth: '3px',
+                              borderLeftColor: event.backgroundColor || 'hsl(var(--primary))',
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-1">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-sm truncate">{event.summary}</h4>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{formatEventTime(event)}</span>
+                                </div>
+                                {event.location && (
+                                  <p className="text-xs text-muted-foreground mt-1 truncate">
+                                    📍 {event.location}
+                                  </p>
+                                )}
+                              </div>
+                              {event.htmlLink && (
+                                <a 
+                                  href={event.htmlLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:text-primary/80 flex-shrink-0"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         )}
       </CardContent>
