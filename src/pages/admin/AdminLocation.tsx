@@ -42,6 +42,11 @@ const AdminLocation = () => {
 
     map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
+    // Wait for style to load before adding markers
+    map.current.on("load", () => {
+      updateMarkerAndCircle(latitude, longitude, radius);
+    });
+
     // Add click handler to place marker
     map.current.on("click", (e) => {
       const { lng, lat } = e.lngLat;
@@ -50,9 +55,6 @@ const AdminLocation = () => {
       updateMarkerAndCircle(lat, lng, radius);
     });
 
-    // Initial marker and circle
-    updateMarkerAndCircle(latitude, longitude, radius);
-
     return () => {
       map.current?.remove();
     };
@@ -60,7 +62,7 @@ const AdminLocation = () => {
 
   // Update circle when radius changes
   useEffect(() => {
-    if (map.current) {
+    if (map.current && map.current.isStyleLoaded()) {
       updateMarkerAndCircle(latitude, longitude, radius);
     }
   }, [radius]);
@@ -98,7 +100,7 @@ const AdminLocation = () => {
   };
 
   const updateMarkerAndCircle = (lat: number, lng: number, rad: number) => {
-    if (!map.current) return;
+    if (!map.current || !map.current.isStyleLoaded()) return;
 
     // Remove existing marker
     if (marker.current) {
