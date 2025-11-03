@@ -92,6 +92,8 @@ serve(async (req) => {
         accuracy,
         status,
         last_updated: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id'
       });
 
     if (upsertError) {
