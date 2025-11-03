@@ -7,11 +7,9 @@ import { Button } from "@/components/ui/button";
 
 interface LocationData {
   user_id: string;
-  status: "home" | "away" | "unknown";
+  status: string;
   last_updated: string;
-  profiles?: {
-    name: string;
-  };
+  user_name?: string;
 }
 
 const WhoIsWhere = () => {
@@ -23,16 +21,27 @@ const WhoIsWhere = () => {
   // Haal alle locaties op
   const fetchLocations = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: locationsData, error: locationsError } = await supabase
         .from("user_locations")
-        .select(`
-          *,
-          profiles:user_id (name)
-        `)
+        .select("*")
         .order("last_updated", { ascending: false });
 
-      if (error) throw error;
-      setLocations(data || []);
+      if (locationsError) throw locationsError;
+
+      // Haal profiel namen op voor elke user
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, name");
+
+      if (profilesError) throw profilesError;
+
+      // Combineer de data
+      const enrichedLocations = (locationsData || []).map(location => ({
+        ...location,
+        user_name: profilesData?.find(p => p.id === location.user_id)?.name
+      }));
+
+      setLocations(enrichedLocations);
     } catch (error) {
       console.error("Error fetching locations:", error);
     } finally {
@@ -209,7 +218,7 @@ const WhoIsWhere = () => {
                     </div>
                     <div>
                       <p className="font-medium">
-                        {location.profiles?.name || "Onbekend"}
+                        {location.user_name || "Onbekend"}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {statusInfo.text}

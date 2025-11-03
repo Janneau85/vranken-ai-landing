@@ -9,6 +9,7 @@ import { ThemeSelector } from "@/components/ThemeSelector";
 import { useUserTheme } from "@/hooks/useUserTheme";
 import { ShoppingCart, CheckSquare, Plus, Bot } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import WhoIsWhere from "@/components/WhoIsWhere";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -152,7 +153,7 @@ const Dashboard = () => {
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 max-w-5xl">
             <Link to="/shopping" className="group">
               <div 
-                className="relative p-8 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
+                className="relative p-8 bg-card border rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
               >
                 <button 
@@ -182,7 +183,7 @@ const Dashboard = () => {
 
             <Link to="/todos" className="group">
               <div 
-                className="relative p-8 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
+                className="relative p-8 bg-card border rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
               >
                 <button 
@@ -212,7 +213,7 @@ const Dashboard = () => {
 
             <Link to="/ai-assistant" className="group">
               <div 
-                className="relative p-8 bg-card border-2 rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
+                className="relative p-8 bg-card border rounded-lg transition-all cursor-pointer h-full hover:shadow-lg hover:scale-[1.02]"
                 style={{ borderColor: accentColor }}
               >
                 <button 
@@ -232,6 +233,11 @@ const Dashboard = () => {
               </div>
             </Link>
           </div>
+        </div>
+
+        {/* Wie is waar sectie */}
+        <div className="max-w-5xl mb-8">
+          <WhoIsWhere />
         </div>
 
         <div className="w-full">
