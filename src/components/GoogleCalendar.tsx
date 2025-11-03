@@ -472,35 +472,38 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
         ) : events.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
         ) : (
-          <div className="space-y-6">
-            {/* Vandaag Sectie */}
-            <div className="pb-6 border-b">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Vandaag - {new Date().toLocaleDateString('nl-NL', { 
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Vandaag Sectie - Grotere tekst en neemt meer ruimte */}
+            <div className="lg:col-span-5 border-r pr-6">
+              <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <Calendar className="h-6 w-6 text-primary" />
+                Vandaag
+              </h3>
+              <p className="text-lg text-muted-foreground mb-4">
+                {new Date().toLocaleDateString('nl-NL', { 
                   weekday: 'long', 
                   day: 'numeric', 
                   month: 'long' 
                 })}
-              </h3>
+              </p>
               
               {todayEvents.length === 0 ? (
-                <div className="text-center py-8 bg-muted/30 rounded-lg">
-                  <p className="text-muted-foreground">Geen afspraken vandaag 🎉</p>
+                <div className="text-center py-12 bg-muted/30 rounded-lg">
+                  <p className="text-lg text-muted-foreground">Geen afspraken vandaag 🎉</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-4">
                   {todayEvents.map((event) => (
                     <div 
                       key={event.id}
-                      className="p-4 border-2 rounded-lg hover:bg-accent/50 transition-colors"
+                      className="p-5 border-2 rounded-lg hover:bg-accent/50 transition-colors"
                       style={{
-                        borderLeftWidth: '4px',
+                        borderLeftWidth: '5px',
                         borderLeftColor: event.backgroundColor || 'hsl(var(--primary))',
                       }}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h4 className="font-semibold text-base flex-1">{event.summary}</h4>
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <h4 className="font-bold text-lg flex-1">{event.summary}</h4>
                         {event.htmlLink && (
                           <a 
                             href={event.htmlLink} 
@@ -508,21 +511,21 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
                             rel="noopener noreferrer"
                             className="text-primary hover:text-primary/80 flex-shrink-0"
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <ExternalLink className="h-5 w-5" />
                           </a>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>{formatEventTime(event)}</span>
+                      <div className="flex items-center gap-2 text-base text-muted-foreground">
+                        <Clock className="h-5 w-5" />
+                        <span className="font-medium">{formatEventTime(event)}</span>
                       </div>
                       {event.location && (
-                        <p className="text-sm text-muted-foreground mt-2">
+                        <p className="text-base text-muted-foreground mt-3">
                           📍 {event.location}
                         </p>
                       )}
                       {event.description && (
-                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                        <p className="text-base text-muted-foreground mt-3 line-clamp-3">
                           {event.description}
                         </p>
                       )}
@@ -533,8 +536,8 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
             </div>
 
             {/* Komende Week Sectie */}
-            <div>
-              <h3 className="text-xl font-bold mb-4">Komende week</h3>
+            <div className="lg:col-span-7">
+              <h3 className="text-xl font-bold mb-4">Komende 7 dagen</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
                 {weekEvents.map(({ date, events: dayEvents }) => (
