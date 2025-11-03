@@ -142,15 +142,19 @@ const Dashboard = () => {
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-16">
-        <div className="mb-12">
-          <h2 className="text-4xl font-bold mb-4 text-foreground">
-            Welkom {userName || user?.email}
-          </h2>
-          <p className="text-muted-foreground mb-8">
-            Je persoonlijke Family Dashboard
-          </p>
+        <div className="w-full max-w-7xl mx-auto space-y-8">
+          {/* Welkom sectie */}
+          <div>
+            <h2 className="text-4xl font-bold mb-4 text-foreground">
+              Welkom {userName || user?.email}
+            </h2>
+            <p className="text-muted-foreground">
+              Je persoonlijke Family Dashboard
+            </p>
+          </div>
 
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-5xl">
+          {/* Actie knoppen */}
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             <Link to="/shopping">
               <div 
                 className="p-6 bg-card border rounded-lg transition-all cursor-pointer hover:shadow-lg hover:scale-[1.02]"
@@ -202,16 +206,16 @@ const Dashboard = () => {
               </div>
             </Link>
           </div>
-        </div>
 
-        {/* Wie is waar sectie */}
-        <div className="w-full max-w-7xl mx-auto mb-8">
-          <WhoIsWhere />
-        </div>
+          {/* Wie is waar sectie */}
+          <div>
+            <WhoIsWhere />
+          </div>
 
-        {/* Kalender sectie */}
-        <div className="w-full max-w-7xl mx-auto">
-          <GoogleCalendar isAdmin={isAdmin} />
+          {/* Kalender sectie */}
+          <div>
+            <GoogleCalendar isAdmin={isAdmin} />
+          </div>
         </div>
       </main>
 
