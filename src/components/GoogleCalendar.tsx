@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, ExternalLink, Unplug } from "lucide-react";
+import { Calendar, Clock, ExternalLink, Unplug, RefreshCcw } from "lucide-react";
 
 interface CalendarEvent {
   id: string;
@@ -435,18 +435,19 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
                   </Button>
                 ) : (
                   <>
-                    <Button 
+                    <button
                       onClick={() => {
                         const accessToken = localStorage.getItem('google_access_token');
                         const refreshToken = localStorage.getItem('google_refresh_token');
                         if (accessToken) fetchEvents(accessToken, refreshToken);
                       }} 
                       disabled={loading}
-                      variant="outline"
-                      size="sm"
+                      className="opacity-70 hover:opacity-100 transition-colors p-1 rounded hover:text-[hsl(47_95%_55%)]"
+                      aria-label="Ververs"
+                      title="Ververs"
                     >
-                      {loading ? "Laden..." : "Ververs"}
-                    </Button>
+                      <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
@@ -472,9 +473,9 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
         ) : events.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">Geen komende evenementen</p>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             {/* Vandaag Sectie - Grotere tekst en neemt meer ruimte */}
-            <div className="lg:col-span-5 border-r pr-6">
+            <div className="md:col-span-5 md:border-r md:pr-6">
               <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <Calendar className="h-6 w-6 text-primary" />
                 Vandaag
@@ -536,7 +537,7 @@ const GoogleCalendar = ({ isAdmin }: GoogleCalendarProps) => {
             </div>
 
             {/* Komende Week Sectie */}
-            <div className="lg:col-span-7">
+            <div className="md:col-span-7">
               <h3 className="text-xl font-bold mb-4">Komende 7 dagen</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
