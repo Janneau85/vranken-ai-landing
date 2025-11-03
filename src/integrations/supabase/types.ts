@@ -92,6 +92,36 @@ export type Database = {
         }
         Relationships: []
       }
+      home_location: {
+        Row: {
+          created_at: string | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string | null
+          radius_meters: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          name?: string | null
+          radius_meters?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string | null
+          radius_meters?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       meal_plan: {
         Row: {
           assigned_to: string | null
@@ -441,6 +471,39 @@ export type Database = {
           status?: string | null
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_locations: {
+        Row: {
+          accuracy: number | null
+          created_at: string | null
+          id: string
+          last_updated: string | null
+          latitude: number | null
+          longitude: number | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          status?: string | null
+          user_id?: string
         }
         Relationships: []
       }
