@@ -31,7 +31,7 @@ const AdminLocation = () => {
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN || "";
+    mapboxgl.accessToken = "pk.eyJ1IjoiamFubmVhdSIsImEiOiJjbWhqaG0xZjQxZGY5MmlxcWo2aHJ3ZndrIn0.wgGyanxM3UOFmK0EXgbE1Q";
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
