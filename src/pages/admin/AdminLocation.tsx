@@ -5,7 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Navigation } from "lucide-react";
 
@@ -21,6 +23,9 @@ const AdminLocation = () => {
   const [radius, setRadius] = useState<number>(100);
   const [name, setName] = useState<string>("Thuis");
   const [loading, setLoading] = useState(false);
+  
+  // Debounce radius to prevent rapid map updates
+  const debouncedRadius = useDebounce(radius, 300);
 
   // Load existing home location
   useEffect(() => {
@@ -60,12 +65,12 @@ const AdminLocation = () => {
     };
   }, []);
 
-  // Update circle when radius changes
+  // Update circle when debounced radius changes
   useEffect(() => {
     if (map.current && map.current.isStyleLoaded()) {
-      updateMarkerAndCircle(latitude, longitude, radius);
+      updateMarkerAndCircle(latitude, longitude, debouncedRadius);
     }
-  }, [radius]);
+  }, [debouncedRadius, latitude, longitude]);
 
   const loadHomeLocation = async () => {
     try {
@@ -102,74 +107,91 @@ const AdminLocation = () => {
   const updateMarkerAndCircle = (lat: number, lng: number, rad: number) => {
     if (!map.current || !map.current.isStyleLoaded()) return;
 
-    // Remove existing marker
-    if (marker.current) {
-      marker.current.remove();
-    }
+    try {
+      // Remove existing marker
+      if (marker.current) {
+        marker.current.remove();
+      }
 
-    // Add new marker
-    marker.current = new mapboxgl.Marker({ color: "#3b82f6" })
-      .setLngLat([lng, lat])
-      .addTo(map.current);
+      // Add new marker
+      marker.current = new mapboxgl.Marker({ color: "#3b82f6" })
+        .setLngLat([lng, lat])
+        .addTo(map.current);
 
-    // Remove existing circle
-    if (circle.current && map.current.getSource("circle")) {
-      map.current.removeLayer("circle-fill");
-      map.current.removeLayer("circle-border");
-      map.current.removeSource("circle");
-    }
+      // Remove existing circle layers and source
+      try {
+        if (map.current.getLayer("circle-fill")) {
+          map.current.removeLayer("circle-fill");
+        }
+        if (map.current.getLayer("circle-border")) {
+          map.current.removeLayer("circle-border");
+        }
+        if (map.current.getSource("circle")) {
+          map.current.removeSource("circle");
+        }
+      } catch (e) {
+        console.log("Layer cleanup warning:", e);
+      }
 
-    // Create circle (geofence visualization)
-    const points = 64;
-    const km = rad / 1000;
-    const coords = {
-      latitude: lat,
-      longitude: lng,
-    };
+      // Create circle (geofence visualization)
+      const points = 64;
+      const km = rad / 1000;
+      const coords = {
+        latitude: lat,
+        longitude: lng,
+      };
 
-    const ret = [];
-    const distanceX = km / (111.32 * Math.cos((coords.latitude * Math.PI) / 180));
-    const distanceY = km / 110.574;
+      const ret = [];
+      const distanceX = km / (111.32 * Math.cos((coords.latitude * Math.PI) / 180));
+      const distanceY = km / 110.574;
 
-    for (let i = 0; i < points; i++) {
-      const theta = (i / points) * (2 * Math.PI);
-      const x = distanceX * Math.cos(theta);
-      const y = distanceY * Math.sin(theta);
-      ret.push([coords.longitude + x, coords.latitude + y]);
-    }
-    ret.push(ret[0]);
+      for (let i = 0; i < points; i++) {
+        const theta = (i / points) * (2 * Math.PI);
+        const x = distanceX * Math.cos(theta);
+        const y = distanceY * Math.sin(theta);
+        ret.push([coords.longitude + x, coords.latitude + y]);
+      }
+      ret.push(ret[0]);
 
-    map.current.addSource("circle", {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        geometry: {
-          type: "Polygon",
-          coordinates: [ret],
+      map.current.addSource("circle", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          geometry: {
+            type: "Polygon",
+            coordinates: [ret],
+          },
+          properties: {},
         },
-        properties: {},
-      },
-    });
+      });
 
-    map.current.addLayer({
-      id: "circle-fill",
-      type: "fill",
-      source: "circle",
-      paint: {
-        "fill-color": "#3b82f6",
-        "fill-opacity": 0.2,
-      },
-    });
+      map.current.addLayer({
+        id: "circle-fill",
+        type: "fill",
+        source: "circle",
+        paint: {
+          "fill-color": "#3b82f6",
+          "fill-opacity": 0.2,
+        },
+      });
 
-    map.current.addLayer({
-      id: "circle-border",
-      type: "line",
-      source: "circle",
-      paint: {
-        "line-color": "#3b82f6",
-        "line-width": 2,
-      },
-    });
+      map.current.addLayer({
+        id: "circle-border",
+        type: "line",
+        source: "circle",
+        paint: {
+          "line-color": "#3b82f6",
+          "line-width": 2,
+        },
+      });
+    } catch (error) {
+      console.error("Error updating marker and circle:", error);
+      toast({
+        title: "Kaart fout",
+        description: "Er ging iets mis bij het updaten van de kaart",
+        variant: "destructive",
+      });
+    }
   };
 
   const getCurrentLocation = () => {
@@ -351,14 +373,14 @@ const AdminLocation = () => {
               <Label htmlFor="radius">
                 Radius (meters): {radius}m
               </Label>
-              <Input
+              <Slider
                 id="radius"
-                type="range"
-                min="50"
-                max="500"
-                step="10"
-                value={radius}
-                onChange={(e) => setRadius(parseInt(e.target.value))}
+                min={50}
+                max={500}
+                step={10}
+                value={[radius]}
+                onValueChange={(value) => setRadius(value[0])}
+                className="py-4"
               />
             </div>
 
