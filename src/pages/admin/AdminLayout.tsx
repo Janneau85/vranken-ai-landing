@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -76,27 +78,29 @@ const AdminLayout = () => {
   }
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+    <SidebarProvider defaultOpen={!isMobile}>
+      <div className="min-h-screen flex w-full overflow-x-hidden">
         <AdminSidebar />
         
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b border-border flex items-center justify-between px-4">
-            <div className="flex items-center gap-4">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 border-b border-border flex items-center justify-between px-2 sm:px-4 gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               <SidebarTrigger />
-              <h1 className="text-xl font-bold text-foreground">Admin Panel</h1>
+              <h1 className="text-base sm:text-xl font-bold text-foreground truncate">Admin Panel</h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 sm:gap-4 flex-shrink-0">
               <Link to="/dashboard">
-                <Button variant="outline" size="sm">Back to Dashboard</Button>
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-4">
+                  {isMobile ? "Dashboard" : "Back to Dashboard"}
+                </Button>
               </Link>
-              <Button onClick={handleLogout} variant="outline" size="sm">
+              <Button onClick={handleLogout} variant="outline" size="sm" className="text-xs sm:text-sm px-2 sm:px-4">
                 Logout
               </Button>
             </div>
           </header>
 
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-6 overflow-auto">
             <Outlet />
           </main>
         </div>

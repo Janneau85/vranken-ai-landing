@@ -22,10 +22,13 @@ const items = [
 ];
 
 export function AdminSidebar() {
-  const { open } = useSidebar();
+  const { open, setOpen, isMobile } = useSidebar();
 
   return (
-    <Sidebar className={open ? "w-60" : "w-14"} collapsible="icon">
+    <Sidebar 
+      className={open ? "w-60" : "w-14"} 
+      collapsible="icon"
+    >
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>
@@ -42,6 +45,7 @@ export function AdminSidebar() {
                           ? "bg-accent text-accent-foreground font-medium"
                           : "hover:bg-accent/50"
                       }
+                      onClick={() => isMobile && setOpen(false)}
                     >
                       <item.icon className="h-4 w-4" />
                       {open && <span>{item.title}</span>}
