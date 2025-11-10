@@ -68,22 +68,6 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 
-            className="text-6xl font-bold mb-2"
-            style={{
-              color: 'hsl(0 0% 15%)',
-              textShadow: 'var(--emboss-inset)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            vranken.AI
-          </h1>
-          <p className="text-muted-foreground">
-            Family Dashboard Login
-          </p>
-        </div>
-
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
